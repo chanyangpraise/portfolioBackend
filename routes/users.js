@@ -218,36 +218,4 @@ router.put("/changePwd", (req, res) => {
   });
 });
 
-// 닉네임 수정
-router.put("/changeNick", (req, res) => {
-  const { uid, nick } = req.body;
-  if (!uid || !nick) res.status(400).end();
-
-  asyncSQL(
-    `
-    UPDATE
-      user
-    SET
-      u_nick = "${nick}"
-    WHERE u_id = ${uid};
-  `,
-    (err) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 했습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          message: "성공되었습니다.",
-        });
-      }
-    }
-  );
-});
-
 module.exports = router;
