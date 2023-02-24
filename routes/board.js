@@ -59,6 +59,7 @@ router.get("/get/:uid", (req, res) => {
     `SELECT 
       b.b_id as bid,
       b.b_comment as content,
+      a.u_email as email,
       b.b_timg as thumbnail,
       b.b_date as date
     FROM Board b JOIN user a
@@ -90,7 +91,90 @@ router.get("/get/:uid", (req, res) => {
     });
 });
 
+//메인 피드 최신순 게시글 6개
+router.get("/get/main", async (req, res) => {
+  let { page, count } = req.query;
+  if (!count) {
+    count = 6;
+  }
+  if (!page || page < 1) {
+    page = 0;
+  }
 
+ await asyncSQL(
+      `SELECT 
+        b.b_id as bid,
+        b.b_comment as content,
+        b.b_img as image,
+        b.b_timg as thumbnail,
+        b.b_date as date,
+        a.u_id as uid,
+        a.u_name as username
+      FROM Board b JOIN user a
+      ON b.b_uid = a.u_id
+      ORDER BY b_date DESC
+      LIMIT ${page * count}, ${count}`
+  )
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        content: rows,
+        nextPage: Number(page) + 1, // 다음 페이지 번호
+      nextCount: Number(count), // 다음 페이지에 보여줄 개수
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+// 게시글 하나만 조회(댓글 보기에 사용)
+router.get("/get/bBard/:bid", (req, res) => {
+  const { bid } = req.params;
+
+  asyncSQL(
+    `
+    SELECT
+      b.b_id as bid,
+      b.b_comment as content,
+      b.b_img as image,
+      b.b_date as date
+    FROM Board b JOIN user u
+    ON b.b_uid = u.u_id
+    WHERE b.b_id = "${bid}"
+  `,
+    (err, rows) => {
+      if (err) {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생 하였습니다.",
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.error(err);
+        }
+      } else if (rows.length > 0) {
+        res.status(200).json({
+          status: "success",
+          // content: rows,
+          bid: rows[0].bid,
+          content: rows[0].content,
+          date: rows[0].date,
+        });
+      } else {
+        res.status(200).json({
+          status: "fail",
+          message: "데이터가 없습니다.",
+        });
+      }
+    }
+  );
+});
 
 // 팔로워 글 조회
 router.get("/get/follow/:uid", (req, res) => {
@@ -111,7 +195,7 @@ router.get("/get/follow/:uid", (req, res) => {
   asyncSQL(
     `SELECT
       b.b_id as bid,
-      a.u_nick as nick,
+      a.u_email as email,
       b.b_comment as content,
       b.b_date  as date
     FROM Board b JOIN user a
@@ -154,7 +238,7 @@ router.get("/get/any", (req, res) => {
     `
     SELECT
       b.b_id as bid,
-      a.u_nick as nick,
+      a.u_email as email,
       b.b_comment as content,
       b.b_date as date
     FROM Board b JOIN user a
@@ -183,46 +267,6 @@ router.get("/get/any", (req, res) => {
   );
 });
 
-// 게시글 하나만 조회(댓글 보기에 사용)
-router.get("/get/bBard/:bid", (req, res) => {
-  const { bid } = req.params;
-
-  asyncSQL(
-    `
-    SELECT
-      b.b_id as bid,
-      b.b_comment as content,
-      b.b_date as date
-    FROM Board b JOIN user u
-    ON b.b_uid = u.u_id
-    WHERE b.b_id = "${bid}"
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else if (rows.length > 0) {
-        res.status(200).json({
-          status: "success",
-          // content: rows,
-          bid: rows[0].bid,
-          content: rows[0].content,
-          date: rows[0].date,
-        });
-      } else {
-        res.status(200).json({
-          status: "fail",
-          message: "데이터가 없습니다.",
-        });
-      }
-    }
-  );
-});
 
 //게시글 갯수 카운트
 router.get("/get/count/:uid", (req, res) => {
@@ -253,48 +297,6 @@ router.get("/get/count/:uid", (req, res) => {
       }
     }
   );
-});
-//메인 피드 최신순 게시글 6개
-router.get("/get/main", async (req, res) => {
-  let { page, count } = req.query;
-  if (!count) {
-    count = 6;
-  }
-  if (!page || page < 1) {
-    page = 0;
-  }
-
- await asyncSQL(
-      `SELECT 
-        b.b_id as bid,
-        b.b_comment as content,
-        b.b_img as image,
-        b.b_timg as thumbnail,
-        b.b_date as date,
-        a.u_id as uid,
-        a.u_name as username
-      FROM Board b JOIN user a
-      ON b.b_uid = a.u_id
-      ORDER BY b_date DESC
-      LIMIT ${page * count}, ${count}`
-  )
-    .then((rows) => {
-      res.status(200).json({
-        status: "success",
-        content: rows,
-        nextPage: Number(page) + 1, // 다음 페이지 번호
-      nextCount: Number(count), // 다음 페이지에 보여줄 개수
-      });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: "fail",
-        message: "서버에서 에러가 발생 하였습니다.",
-      });
-      if (process.env.NODE_ENV === "development") {
-        console.error(err);
-      }
-    });
 });
 
 
