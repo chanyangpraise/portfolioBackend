@@ -12,7 +12,7 @@ const storage = multerS3({
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
   }),
-  bucket: "your-bucket-name",
+  bucket: process.env.BUCKET_NAME,
   acl: "public-read",
   shouldTransform: function (req, file, cb) {
     cb(null, /^image/i.test(file.mimetype));
