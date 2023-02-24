@@ -4,6 +4,7 @@ const upload = require("../functions/multer");
 
 const router = express.Router();
 
+//게시글 작성
 router.post("/write", upload.single("image"), async (req, res) => {
   const { userId, content } = req.body;
   if (!userId || !content) {
@@ -11,7 +12,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
   }
   const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${userId}", "${image}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img, b_timg, b_date) VALUES ("${content}", "${userId}", "${image}", "${thumbnail}, ${date}")`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
