@@ -39,6 +39,70 @@ router.post("/write", upload.single("image"), async (req, res) => {
     });
 });
 
+//게시글 수정
+router.put("/update/:bid", upload.single("image"), async (req, res) => {
+  const bid = req.params.bid;
+  const { userId, content } = req.body;
+  if (!userId || !content) {
+    res.status(400).end();
+  }
+  const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
+  await asyncSQL(
+    `UPDATE Board SET b_comment="${content}", b_img="${image}" WHERE b_id=${bid} AND b_uid=${userId}`
+  )
+    .then((rows) => {
+      if (rows.affectedRows < 1) {
+        res.status(404).json({
+          status: "fail",
+          message: "해당 게시글을 찾을 수 없습니다.",
+        });
+      } else {
+        res.status(200).json({
+          status: "success",
+          message: "게시글이 수정되었습니다.",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+//게시글 삭제
+router.delete("/delete/:bid", async (req, res) => {
+  const bid = req.params.bid;
+  const userId = req.body.userId;
+  await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${userId}`)
+    .then((rows) => {
+      if (rows.affectedRows < 1) {
+        res.status(404).json({
+          status: "fail",
+          message: "해당 게시글을 찾을 수 없습니다.",
+        });
+      } else {
+        res.status(200).json({
+          status: "success",
+          message: "게시글이 삭제되었습니다.",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
 // 특정 사용자의 글 조회
 // select 사용자 닉네임 + 게시판 글 + 생성일자
 // http://localhost:3000/boadrd/get?id=1
@@ -189,10 +253,8 @@ router.get("/get/follow/:uid", (req, res) => {
   if (!count) {
     count = 10;
   }
-
   // 삼항연산자
   // let count = !req.query.count ? 10 : req.query.count;
-
   asyncSQL(
     `SELECT
       b.b_id as bid,
