@@ -23,7 +23,7 @@ router.get("/get/:bid", (req, res) => {
     SELECT
       c.c_id as cid,
       u.u_id as uid,
-      u.u_nick as nick,
+      u.u_email as email,
       c.c_content as content,
       c.c_date as date
     FROM comment c JOIN user u
@@ -31,25 +31,25 @@ router.get("/get/:bid", (req, res) => {
     WHERE c_bid = "${bid}"
     ORDER BY c.c_date DESC
     LIMIT ${page * count}, ${count}
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          content: rows,
-        });
-      }
+  `
+  )
+  .then((rows) => {
+    res.status(200).json({
+      status: "success",
+      content: rows,
+    });
+  })
+  .catch((err) => {
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생 하였습니다.",
+    });
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
     }
-  );
+  });
 });
+
 
 router.get("/get/user/:uid", (req, res) => {
   const { uid } = req.params;
