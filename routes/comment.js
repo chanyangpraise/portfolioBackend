@@ -3,7 +3,7 @@ const asyncSQL = require("../functions/db");
 
 const router = express.Router();
 
-// 댓글 조회
+// 댓글 목록
 // 페이징 처리
 router.get("/get/:bid", (req, res) => {
   const { bid } = req.params;
@@ -33,62 +33,21 @@ router.get("/get/:bid", (req, res) => {
     LIMIT ${page * count}, ${count}
   `
   )
-  .then((rows) => {
-    res.status(200).json({
-      status: "success",
-      content: rows,
-    });
-  })
-  .catch((err) => {
-    res.status(500).json({
-      status: "fail",
-      message: "서버에서 에러가 발생 하였습니다.",
-    });
-    if (process.env.NODE_ENV === "development") {
-      console.error(err);
-    }
-  });
-});
-
-
-router.get("/get/user/:uid", (req, res) => {
-  const { uid } = req.params;
-  let { page, count } = req.query;
-  if (!uid) res.status(400).end();
-  if (!page) page = 0;
-  if (!count) count = 5;
-
-  asyncSQL(
-    `
-    SELECT
-      c.c_id as cid,
-      u.u_id as uid,
-      u.u_nick as nick,
-      c.c_content as content,
-      c.c_date as date
-    FROM comment c JOIN user u
-    ON c.c_uid = u.u_id
-    WHERE c.c_uid = "${uid}"
-    ORDER BY c.c_date DESC
-    LIMIT ${page * count}, ${count}
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          content: rows,
-        });
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        content: rows,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
       }
-    }
-  );
+    });
 });
 
 // 댓글 작성
@@ -100,7 +59,7 @@ router.post("/write", (req, res) => {
 
   asyncSQL(
     `
-    INSERT INTO comment (c_content, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
+    INSERT INTO comment (c_comment, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
   `,
     (err, rows) => {
       if (err || rows.affectedRows < 1) {
@@ -150,7 +109,7 @@ router.put("/fix/:cid", (req, res) => {
         if (rows[0].c_uid === Number(userId)) {
           asyncSQL(
             `
-            UPDATE comment SET c_content = "${content}"
+            UPDATE comment SET c_comment = "${content}"
             WHERE c_id = "${cid}"
           `,
             (err1) => {
@@ -233,36 +192,6 @@ router.delete("/delete/:cid", (req, res) => {
         }
       } else {
         res.status(403).end();
-      }
-    }
-  );
-});
-
-router.get("/get/count/:uid", (req, res) => {
-  const { uid } = req.params;
-  if (!uid) res.status(400).end();
-
-  asyncSQL(
-    `
-    SELECT
-      COUNT (c_id) as count
-    FROM comment
-    WHERE c_uid = ${uid};
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          count: rows[0].count,
-        });
       }
     }
   );
