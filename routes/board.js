@@ -12,7 +12,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
   }
   const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img, b_timg, b_date) VALUES ("${content}", "${uid}", "${image}", "${thumbnail}, ${date}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img, b_date) VALUES ("${content}", "${uid}", "${image}", ${date}")`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
