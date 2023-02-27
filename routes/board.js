@@ -6,13 +6,13 @@ const router = express.Router();
 
 //게시글 작성
 router.post("/write", upload.single("image"), async (req, res) => {
-  const { userId, content } = req.body;
-  if (!userId || !content) {
+  const { uid, content } = req.body;
+  if (!uid || !content) {
     res.status(400).end();
   }
   const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img, b_timg, b_date) VALUES ("${content}", "${userId}", "${image}", "${thumbnail}, ${date}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img, b_timg, b_date) VALUES ("${content}", "${uid}", "${image}", "${thumbnail}, ${date}")`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
@@ -42,13 +42,13 @@ router.post("/write", upload.single("image"), async (req, res) => {
 //게시글 수정
 router.put("/update/:bid", upload.single("image"), async (req, res) => {
   const bid = req.params.bid;
-  const { userId, content } = req.body;
-  if (!userId || !content) {
+  const { uid, content } = req.body;
+  if (!uid || !content) {
     res.status(400).end();
   }
   const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `UPDATE Board SET b_comment="${content}", b_img="${image}" WHERE b_id=${bid} AND b_uid=${userId}`
+    `UPDATE Board SET b_comment="${content}", b_img="${image}" WHERE b_id=${bid} AND b_uid=${uid}`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
@@ -77,8 +77,8 @@ router.put("/update/:bid", upload.single("image"), async (req, res) => {
 //게시글 삭제
 router.delete("/delete/:bid", async (req, res) => {
   const bid = req.params.bid;
-  const userId = req.body.userId;
-  await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${userId}`)
+  const uid = req.body.uid;
+  await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
     .then((rows) => {
       if (rows.affectedRows < 1) {
         res.status(404).json({
@@ -131,7 +131,7 @@ router.get("/get/:uid", (req, res) => {
     ON b.b_uid = a.u_id
     WHERE b_uid = "${uid}"
     ORDER BY b_date DESC
-    LIMIT ${page * count}, ${count}`,
+    LIMIT ${page * count}, ${count}`
     // LIMIT a   -> a 개수 만큼만 들고 오겠다.
     // LIMIT a , b -> a부터 b개만큼 들고 오겠다.
     // page 0 count 10 -> 0, 10
@@ -142,7 +142,7 @@ router.get("/get/:uid", (req, res) => {
         status: "success",
         content: rows,
         nextPage: Number(page) + 1, // 다음 페이지 번호
-      nextCount: Number(count), // 다음 페이지에 보여줄 개수
+        nextCount: Number(count), // 다음 페이지에 보여줄 개수
       });
     })
     .catch((err) => {
@@ -166,8 +166,8 @@ router.get("/get/main", async (req, res) => {
     page = 0;
   }
 
- await asyncSQL(
-      `SELECT 
+  await asyncSQL(
+    `SELECT 
         b.b_id as bid,
         b.b_comment as content,
         b.b_img as image,
@@ -185,7 +185,7 @@ router.get("/get/main", async (req, res) => {
         status: "success",
         content: rows,
         nextPage: Number(page) + 1, // 다음 페이지 번호
-      nextCount: Number(count), // 다음 페이지에 보여줄 개수
+        nextCount: Number(count), // 다음 페이지에 보여줄 개수
       });
     })
     .catch((err) => {
@@ -241,96 +241,6 @@ router.get("/get/bBard/:bid", (req, res) => {
   );
 });
 
-// 팔로워 글 조회
-router.get("/get/follow/:uid", (req, res) => {
-  // const uid = req.params.uid
-  const { uid } = req.params;
-  // let count = req.query.count;
-  let { count } = req.query;
-  if (!uid) {
-    res.status(400).end();
-  }
-  if (!count) {
-    count = 10;
-  }
-  // 삼항연산자
-  // let count = !req.query.count ? 10 : req.query.count;
-  asyncSQL(
-    `SELECT
-      b.b_id as bid,
-      a.u_email as email,
-      b.b_comment as content,
-      b.b_date  as date
-    FROM Board b JOIN user a
-    ON b.b_uid = a.u_id
-    WHERE b.b_uid IN (
-      SELECT 
-        f_ing 
-      FROM follow
-      WHERE f_er = "${uid}"
-    )
-    ORDER BY b.b_date DESC
-    LIMIT ${count};
-    `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          content: rows,
-        });
-      }
-    }
-  );
-});
-
-// 내가 지금 팔로잉 한 사람이 없으면
-// 글이 0개 이것은 어떻게 할 것인가?
-router.get("/get/any", (req, res) => {
-  const { count } = req.query;
-  console.log(count);
-
-  asyncSQL(
-    `
-    SELECT
-      b.b_id as bid,
-      a.u_email as email,
-      b.b_comment as content,
-      b.b_date as date
-    FROM Board b JOIN user a
-    ON b.b_uid = a.u_id
-    ORDER BY b_date DESC
-    LIMIT ${count};
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        console.log("1111");
-        console.log(rows);
-        res.status(200).json({
-          status: "success",
-          content: rows,
-        });
-      }
-    }
-  );
-});
-
-
 //게시글 갯수 카운트
 router.get("/get/count/:uid", (req, res) => {
   const { uid } = req.params;
@@ -362,5 +272,63 @@ router.get("/get/count/:uid", (req, res) => {
   );
 });
 
+//좋아요 추가
+router.post("/like", (req, res) => {
+  const { uid, bid } = req.body;
+  if (!uid || !bid) {
+    res.status(400).end();
+  }
+
+  asyncSQL(`
+    INSERT INTO \`like\` (l_bid, l_uid) VALUES (${bid}, ${uid})
+  `)
+    .then(() => {
+      res.status(201).json({
+        status: "success",
+        message: "좋아요가 등록되었습니다.",
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+//좋아요 취소
+router.delete("/like/:bid/:uid", async (req, res) => {
+  const { bid, uid } = req.params;
+
+  asyncSQL(
+    `DELETE FROM like
+     WHERE l_bid = ${bid} AND l_uid = ${uid}`
+  )
+    .then((result) => {
+      if (result.affectedRows === 0) {
+        res.status(400).json({
+          status: "fail",
+          message: "좋아요를 누르지 않은 게시글입니다.",
+        });
+      } else {
+        res.status(200).json({
+          status: "success",
+          message: "좋아요가 취소되었습니다.",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
 
 module.exports = router;
