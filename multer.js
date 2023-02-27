@@ -35,6 +35,16 @@ const storage = multerS3({
         cb(null, sharp().resize(200, 200).jpeg());
       },
     },
+    {
+      id: "u_img",
+      key: function (req, file, cb) {
+        const uid = req.user.id;
+        cb(null, `profile-${uid}-${uuidv4()}-${file.originalname}`);
+      },
+      transform: function (req, file, cb) {
+        cb(null, sharp().jpeg());
+      },
+    },
   ],
 });
 

@@ -1,10 +1,11 @@
 const express = require("express");
 const { sendMail, randomNumber } = require("../functions/mail");
 const asyncSQL = require("../functions/db");
+const upload = require("../functions/multer");
 const { encrypt } = require("../functions/encrypt");
-
 const router = express.Router();
 
+//이메일 인증
 router.get("/", (req, res) => {
   res.send("respond with a resource");
 });
@@ -40,6 +41,7 @@ router.post("/auth_mail", (req, res) => {
   );
 });
 
+//이메일 인증
 router.get("/auth_valid", (req, res) => {
   const { email, digit } = req.query;
   asyncSQL(
@@ -74,8 +76,7 @@ router.get("/auth_valid", (req, res) => {
   );
 });
 
-// 동일한 이메일이 있을때 가입 X
-
+//동일한 이메일이 있을때 가입 X
 router.post("/register", (req, res) => {
   const { email, pwd, nick, name } = req.body;
   const encryptPwd = encrypt(pwd);
@@ -119,6 +120,7 @@ router.post("/register", (req, res) => {
   );
 });
 
+//로그인
 router.post("/login", (req, res) => {
   const { email, pwd } = req.body;
   const encryptPwd = encrypt(pwd);
@@ -218,4 +220,78 @@ router.put("/changePwd", (req, res) => {
   });
 });
 
+//프로필 이미지 받기
+router.post("/upload", upload.single("image"), async (req, res) => {
+  try {
+    const { filename } = req.file;
+    const { userId } = req.body;
+
+    // u_img 칼럼을 업데이트하는 SQL 쿼리
+    const sql = "UPDATE user SET u_img = ? WHERE id = ?";
+    const result = await db.query(sql, [filename, userId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
+    }
+
+    res.status(200).json({ message: "프로필 이미지 업로드 성공" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+//프로필 이미지 수정
+router.put(
+  "/profile-image/:userId",
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { filename } = req.file;
+      const { userId } = req.params;
+
+      // u_img 칼럼을 업데이트하는 SQL 쿼리
+      const sql = "UPDATE user SET u_img = ? WHERE id = ?";
+      const result = await db.query(sql, [filename, userId]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
+      }
+
+      res.status(200).json({ message: "프로필 이미지 업로드 성공" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "서버 오류" });
+    }
+  }
+);
+//프로필 이미지 삭제
+router.delete("/profile-image/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // 사용자 정보를 가져오는 SQL 쿼리
+    const selectUserSql = "SELECT u_img FROM user WHERE id = ?";
+    const [rows] = await db.query(selectUserSql, userId);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
+    }
+
+    const user = rows[0];
+
+    // u_img를 null로 업데이트하는 SQL 쿼리
+    const updateSql = "UPDATE user SET u_img = null WHERE id = ?";
+    await db.query(updateSql, userId);
+
+    // S3에서 이미지 삭제
+    await deleteProfileImage(user);
+
+    res.status(200).json({ message: "프로필 이미지 삭제 성공" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
 module.exports = router;
+

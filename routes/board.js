@@ -1,6 +1,7 @@
 const express = require("express");
 const asyncSQL = require("../functions/db");
 const upload = require("../functions/multer");
+const deleteBoardImages = require("../functions/delete");
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
   }
   const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img, b_date) VALUES ("${content}", "${uid}", "${image}", ${date}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${uid}", "${image}")`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
@@ -40,15 +41,14 @@ router.post("/write", upload.single("image"), async (req, res) => {
 });
 
 //게시글 수정
-router.put("/update/:bid", upload.single("image"), async (req, res) => {
+router.put("/update/:bid", async (req, res) => {
   const bid = req.params.bid;
   const { uid, content } = req.body;
   if (!uid || !content) {
     res.status(400).end();
   }
-  const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
-    `UPDATE Board SET b_comment="${content}", b_img="${image}" WHERE b_id=${bid} AND b_uid=${uid}`
+    `UPDATE Board SET b_comment="${content}" WHERE b_id=${bid} AND b_uid=${uid}`
   )
     .then((rows) => {
       if (rows.affectedRows < 1) {
@@ -74,22 +74,36 @@ router.put("/update/:bid", upload.single("image"), async (req, res) => {
     });
 });
 
+
 //게시글 삭제
 router.delete("/delete/:bid", async (req, res) => {
   const bid = req.params.bid;
   const uid = req.body.uid;
-  await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
-    .then((rows) => {
-      if (rows.affectedRows < 1) {
+  await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+    .then(async (rows) => {
+      if (rows.length < 1) {
         res.status(404).json({
           status: "fail",
           message: "해당 게시글을 찾을 수 없습니다.",
         });
       } else {
-        res.status(200).json({
-          status: "success",
-          message: "게시글이 삭제되었습니다.",
-        });
+        await deleteBoardImages(rows[0]);
+        await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+          .then((result) => {
+            res.status(200).json({
+              status: "success",
+              message: "게시글이 삭제되었습니다.",
+            });
+          })
+          .catch((err) => {
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생 했습니다.",
+            });
+            if (process.env.NODE_ENV === "development") {
+              console.error(err);
+            }
+          });
       }
     })
     .catch((err) => {
@@ -114,7 +128,7 @@ router.get("/get/:uid", (req, res) => {
     res.status(400).end();
   }
   if (!count) {
-    count = 10;
+    count = 6;
   }
   if (!page || page < 1) {
     page = 0;
@@ -125,7 +139,8 @@ router.get("/get/:uid", (req, res) => {
       b.b_id as bid,
       b.b_comment as content,
       a.u_email as email,
-      b.b_timg as thumbnail,
+      a.u_img as uimg,
+      b.b_timg as btimg,
       b.b_date as date
     FROM Board b JOIN user a
     ON b.b_uid = a.u_id
@@ -170,10 +185,10 @@ router.get("/get/main", async (req, res) => {
     `SELECT 
         b.b_id as bid,
         b.b_comment as content,
-        b.b_img as image,
-        b.b_timg as thumbnail,
+        b.b_timg as btimg,
         b.b_date as date,
         a.u_id as uid,
+        a.u_img as uimg,
         a.u_name as username
       FROM Board b JOIN user a
       ON b.b_uid = a.u_id
@@ -200,7 +215,7 @@ router.get("/get/main", async (req, res) => {
 });
 
 // 게시글 하나만 조회(댓글 보기에 사용)
-router.get("/get/bBard/:bid", (req, res) => {
+router.get("/get/board/:bid", (req, res) => {
   const { bid } = req.params;
 
   asyncSQL(
@@ -208,8 +223,9 @@ router.get("/get/bBard/:bid", (req, res) => {
     SELECT
       b.b_id as bid,
       b.b_comment as content,
-      b.b_img as image,
-      b.b_date as date
+      b.b_img as bimg,
+      b.b_date as date,
+      u.u_img as uimg 
     FROM Board b JOIN user u
     ON b.b_uid = u.u_id
     WHERE b.b_id = "${bid}"

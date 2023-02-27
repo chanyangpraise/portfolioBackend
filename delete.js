@@ -23,7 +23,7 @@ async function deleteBoardImages(board) {
 async function deleteProfileImage(user) {
   const params = {
     Bucket: process.env.BUCKET_NAME,
-    Key: user.profileImg,
+    Key: user.u_img,
   };
   await s3Client.send(new DeleteObjectCommand(params));
 }

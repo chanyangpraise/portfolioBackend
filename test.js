@@ -1,44 +1,233 @@
-router.get("/get/:uid", (req, res) => {
-  const { uid } = req.params;
-  let { page, count } = req.query;
-  if (!uid) {
+//댓글 삭제
+router.delete("/delete/:cid", (req, res) => {
+  const { cid } = req.params;
+  const { uid } = req.query;
+  if (!cid || !uid) {
     res.status(400).end();
   }
-  if (!count) {
-    count = 10;
-  }
-  if (!page || page < 1) {
-    page = 0;
-  }
 
-  asyncSQL(
-    `SELECT 
-      b.b_id as bid,
-      b.b_comment as content,
-      b.b_timg as thumbnail,
-      b.b_date as date
-    FROM Board b JOIN user a
-    ON b.b_uid = a.u_id
-    WHERE b_uid = "${uid}"
-    ORDER BY b_date DESC
-    LIMIT ${page * count}, ${count}`,
-    // LIMIT a   -> a 개수 만큼만 들고 오겠다.
-    // LIMIT a , b -> a부터 b개만큼 들고 오겠다.
-    // page 0 count 10 -> 0, 10
-    // page 1 count 10 -> 10, 10
-  )
+  asyncSQL(`SELECT c_uid FROM comment WHERE c_id = ${cid}; `)
     .then((rows) => {
-      res.status(200).json({
-        status: "success",
-        content: rows,
-        nextPage: Number(page) + 1, // 다음 페이지 번호
-      nextCount: Number(count), // 다음 페이지에 보여줄 개수
-      });
+      if (rows.length > 0) {
+        if (rows[0].c_uid === Number(uid)) {
+          asyncSQL(`DELETE FROM comment WHERE c_id = "${cid}"; `)
+            .then(() => {
+              res.status(200).json({
+                status: "success",
+                message: "성공적으로 바뀌었습니다.",
+              });
+            })
+            .catch((err) => {
+              res.status(500).json({
+                status: "fail",
+                message: "서버에서 에러가 발생 했습니다.",
+              });
+              if (process.env.NODE_ENV === "development") {
+                console.error(err);
+              }
+            });
+        } else {
+          res.status(403).end();
+        }
+      } else {
+        res.status(404).end();
+      }
     })
     .catch((err) => {
       res.status(500).json({
         status: "fail",
-        message: "서버에서 에러가 발생 하였습니다.",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+//대댓
+router.post("/write/:bid", async (req, res) => {
+  const { bid } = req.params;
+  const { uid, content, parentId } = req.body;
+
+  if (!uid || !content || !bid) {
+    res.status(400).end();
+  }
+
+  asyncSQL(
+    `
+    INSERT INTO comment (c_bid, c_uid, c_content, c_parent_id, c_date) 
+    VALUES ("${bid}", "${uid}", "${content}", ${
+      parentId || null
+    }, "${new Date().toISOString()}")`
+  )
+    .then((rows) => {
+      if (rows.affectedRows < 1) {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생 했습니다.",
+        });
+      } else {
+        res.status(201).json({
+          status: "success",
+          message: "성공되었습니다.",
+          cid: `${rows.insertId}`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+//대댓수정
+router.put("/fix/:re_cid", async (req, res) => {
+  const { re_cid } = req.params;
+  const { userId, content } = req.body;
+
+  try {
+    // 본인 확인
+    const [userRows] = await asyncSQL(
+      `
+      SELECT
+        re_uid
+      FROM Re_comment
+      WHERE re_cid = ?
+      `,
+      [re_cid]
+    );
+
+    if (userRows.length > 0 && userRows[0].re_uid === Number(userId)) {
+      // 댓글 수정
+      const [updateRows] = await asyncSQL(
+        `
+        UPDATE Re_comment SET re_comment = ?
+        WHERE re_cid = ?
+        `,
+        [content, re_cid]
+      );
+
+      if (updateRows.affectedRows > 0) {
+        res.status(200).json({
+          status: "success",
+          message: "성공적으로 수정되었습니다.",
+        });
+      } else {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생했습니다.",
+        });
+      }
+    } else {
+      res.status(403).end();
+    }
+  } catch (err) {
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생했습니다.",
+    });
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
+    }
+  }
+});
+//프로필이미지 multer.js
+const { S3Client } = require("@aws-sdk/client-s3");
+const multer = require("multer");
+const multerS3 = require("multer-s3");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+
+const storage = multerS3({
+  s3: new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  }),
+  bucket: process.env.BUCKET_NAME,
+  shouldTransform: function (req, file, cb) {
+    cb(null, /^image/i.test(file.mimetype));
+  },
+  transforms: [
+    {
+      id: "b_img",
+      key: function (req, file, cb) {
+        cb(null, `${uuidv4()}-${file.originalname}`);
+      },
+      transform: function (req, file, cb) {
+        cb(null, sharp().jpeg());
+      },
+    },
+    {
+      id: "b_timg",
+      key: function (req, file, cb) {
+        cb(null, Date.now().toString() + "-thumbnail-" + file.originalname);
+      },
+      transform: function (req, file, cb) {
+        cb(null, sharp().resize(200, 200).jpeg());
+      },
+    },
+    {
+      id: "u_img",
+      key: function (req, file, cb) {
+        const uid = req.user.id;
+        cb(null, `profile-${uid}-${uuidv4()}-${file.originalname}`);
+      },
+      transform: function (req, file, cb) {
+        cb(null, sharp().jpeg());
+      },
+    },
+  ],
+});
+
+const upload = multer({ storage });
+
+module.exports = upload;
+
+
+//게시물 삭제
+router.delete("/delete/:bid", async (req, res) => {
+  const bid = req.params.bid;
+  const uid = req.body.uid;
+  await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+    .then(async (rows) => {
+      if (rows.length < 1) {
+        res.status(404).json({
+          status: "fail",
+          message: "해당 게시글을 찾을 수 없습니다.",
+        });
+      } else {
+        // 게시물 이미지와 썸네일 이미지 삭제
+        await deleteBoardImages(rows[0]);
+        // 게시물 삭제
+        // 게시물 삭제
+        await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+          .then((result) => {
+            res.status(200).json({
+              status: "success",
+              message: "게시글이 삭제되었습니다.",
+            });
+          })
+          .catch((err) => {
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생 했습니다.",
+            });
+            if (process.env.NODE_ENV === "development") {
+              console.error(err);
+            }
+          });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
       });
       if (process.env.NODE_ENV === "development") {
         console.error(err);
@@ -46,4 +235,68 @@ router.get("/get/:uid", (req, res) => {
     });
 });
 
-  
+//게시물 삭제2
+const router = require("express").Router();
+const asyncSQL = require("../db");
+const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+async function deleteBoardImages(board) {
+  const params = {
+    Bucket: process.env.BUCKET_NAME,
+    Delete: {
+      Objects: [{ Key: board.b_img }, { Key: board.b_timg }],
+    },
+  };
+  await s3Client.send(new DeleteObjectCommand(params));
+}
+
+router.delete("/delete/:bid", async (req, res) => {
+  const bid = req.params.bid;
+  const uid = req.body.uid;
+  await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+    .then(async (rows) => {
+      if (rows.length < 1) {
+        res.status(404).json({
+          status: "fail",
+          message: "해당 게시글을 찾을 수 없습니다.",
+        });
+      } else {
+        await deleteBoardImages(rows[0]);
+        await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
+          .then((result) => {
+            res.status(200).json({
+              status: "success",
+              message: "게시글이 삭제되었습니다.",
+            });
+          })
+          .catch((err) => {
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생 했습니다.",
+            });
+            if (process.env.NODE_ENV === "development") {
+              console.error(err);
+            }
+          });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+module.exports = router;
