@@ -240,6 +240,7 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 //프로필 이미지 수정
 router.put(
   "/profile-image/:userId",
@@ -264,6 +265,7 @@ router.put(
     }
   }
 );
+
 //프로필 이미지 삭제
 router.delete("/profile-image/:userId", async (req, res) => {
   try {
