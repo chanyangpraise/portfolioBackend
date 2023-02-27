@@ -57,28 +57,32 @@ router.post("/write", (req, res) => {
     res.status(400).end();
   }
 
-  asyncSQL(
-    `
+  asyncSQL(`
     INSERT INTO comment (c_comment, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
-  `,
-    (err, rows) => {
-      if (err || rows.affectedRows < 1) {
+  `)
+    .then((result) => {
+      if (result.affectedRows < 1) {
         res.status(500).json({
           status: "fail",
           message: "서버에서 에러가 발생 했습니다.",
         });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
       } else {
         res.status(201).json({
           status: "success",
           message: "성공되었습니다.",
-          cid: `${rows.insertId}`,
+          cid: `${result.insertId}`,
         });
       }
-    }
-  );
+    })
+    .catch((error) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(error);
+      }
+    });
 });
 
 // 댓글 수정
@@ -95,106 +99,89 @@ router.put("/fix/:cid", (req, res) => {
       c_uid
     FROM comment
     WHERE c_id = ${cid}
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else if (rows.length > 0) {
+  `
+  )
+    .then((rows) => {
+      if (rows.length > 0) {
         if (rows[0].c_uid === Number(userId)) {
           asyncSQL(
             `
             UPDATE comment SET c_comment = "${content}"
             WHERE c_id = "${cid}"
-          `,
-            (err1) => {
-              if (err1) {
-                res.status(500).json({
-                  status: "fail",
-                  message: "서버에서 에러가 발생 하였습니다.",
-                });
-                if (process.env.NODE_ENV === "development") {
-                  console.error(err1);
-                }
-              } else {
-                res.status(200).json({
-                  status: "success",
-                  message: "성공적으로 바뀌었습니다.",
-                });
+          `
+          )
+            .then(() => {
+              res.status(200).json({
+                status: "success",
+                message: "성공적으로 바뀌었습니다.",
+              });
+            })
+            .catch((err) => {
+              res.status(500).json({
+                status: "fail",
+                message: "서버에서 에러가 발생 하였습니다.",
+              });
+              if (process.env.NODE_ENV === "development") {
+                console.error(err);
               }
-            }
-          );
+            });
         } else {
           res.status(403).end();
         }
       } else {
         res.status(403).end();
       }
-    }
-  );
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
   // 댓글 수정
 });
 
 // 댓글 삭제
 // 어떤 댓글인지 알아야됨 -> cId
 // 쓴 사람이 지운건지? -> uId
-router.delete("/delete/:cid", (req, res) => {
+router.delete("/delete/:cid", async (req, res) => {
   const { cid } = req.params;
   const { uid } = req.query;
+
   if (!cid || !uid) {
     res.status(400).end();
+    return;
   }
 
-  asyncSQL(
-    `
-    SELECT
-      c_uid
-    FROM comment
-    WHERE c_id = ${cid};
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 했습니다.",
+  try {
+    const rows = await asyncSQL(
+      `SELECT c_uid FROM comment WHERE c_id = ${cid}; `
+    );
+    if (rows.length > 0) {
+      if (rows[0].c_uid === Number(uid)) {
+        await asyncSQL(`DELETE FROM comment WHERE c_id = "${cid}"; `);
+        res.status(200).json({
+          status: "success",
+          message: "성공적으로 바뀌었습니다.",
         });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else if (rows.length > 0) {
-        if (rows[0].c_uid === Number(uid)) {
-          asyncSQL(
-            `
-            DELETE FROM comment WHERE c_id = "${cid}";
-          `,
-            (err1) => {
-              if (err1) {
-                res.status(500).json({
-                  status: "fail",
-                  message: "서버에서 에러가 발생 했습니다.",
-                });
-                if (process.env.NODE_ENV === "development") {
-                  console.error(err1);
-                }
-              } else {
-                res.status(200).json({
-                  status: "success",
-                  message: "성공적으로 바뀌었습니다.",
-                });
-              }
-            }
-          );
-        }
       } else {
         res.status(403).end();
       }
+    } else {
+      res.status(404).end();
     }
-  );
+  } catch (err) {
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생 했습니다.",
+    });
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
+    }
+  }
 });
 
 module.exports = router;
