@@ -250,15 +250,25 @@ router.put(
       const { filename } = req.file;
       const { userId } = req.params;
 
-      // u_img 칼럼을 업데이트하는 SQL 쿼리
-      const sql = "UPDATE user SET u_img = ? WHERE id = ?";
-      const result = await db.query(sql, [filename, userId]);
+      // 이전 프로필 이미지 삭제
+      const sql = "SELECT u_img FROM user WHERE id = ?";
+      const [rows] = await db.query(sql, userId);
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
+      }
+
+      await deleteProfileImage(rows[0]);
+
+      // 새로운 프로필 이미지 업데이트
+      const updateSql = "UPDATE user SET u_img = ? WHERE id = ?";
+      const result = await db.query(updateSql, [filename, userId]);
 
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
       }
 
-      res.status(200).json({ message: "프로필 이미지 업로드 성공" });
+      res.status(200).json({ message: "프로필 이미지 수정 성공" });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "서버 오류" });
