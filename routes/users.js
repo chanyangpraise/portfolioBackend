@@ -78,7 +78,7 @@ router.get("/auth_valid", (req, res) => {
 
 //동일한 이메일이 있을때 가입 X
 router.post("/register", (req, res) => {
-  const { email, pwd, nick, name } = req.body;
+  const { email, pwd, phone } = req.body;
   const encryptPwd = encrypt(pwd);
 
   asyncSQL(
@@ -98,7 +98,7 @@ router.post("/register", (req, res) => {
         });
       } else {
         asyncSQL(
-          `INSERT INTO user (u_email, u_pwd, u_name, u_nick) VALUES ("${email}", "${encryptPwd}", "${name}", "${nick}");`,
+          `INSERT INTO user (u_email, u_password, u_phone) VALUES ("${email}", "${encryptPwd}", "${phone}");`,
           (err1, rows1) => {
             if (err1 || rows1.affectedRows < 1) {
               console.log("2번 select");
@@ -126,7 +126,7 @@ router.post("/login", (req, res) => {
   const encryptPwd = encrypt(pwd);
 
   asyncSQL(
-    `SELECT u_id, u_pwd, u_name, u_nick FROM user WHERE u_email = "${email}";`,
+    `SELECT u_id, u_password, u_img FROM user WHERE u_email = "${email}";`,
     (err, rows) => {
       if (err) {
         res.status(500).json({
@@ -134,14 +134,13 @@ router.post("/login", (req, res) => {
           message: "서버에서 에러가 발생 하였습니다.",
         });
       } else if (rows.length > 0) {
-        if (rows[0].u_pwd === encryptPwd) {
+        if (rows[0].u_password === encryptPwd) {
           res.status(200).json({
             status: "success",
             message: "로그인 성공",
             info: {
               id: rows[0].u_id,
-              name: rows[0].u_name,
-              nick: rows[0].u_nick,
+              uimg: rows[0].u_img,
             },
           });
         } else {
@@ -173,51 +172,54 @@ router.put("/changePwd", (req, res) => {
   }
   const encryptPwd = encrypt(pwd);
 
-  asyncSQL(`SELECT u_pwd FROM user WHERE u_email = "${email}"`, (err, rows) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({
-        status: "fail",
-        message: "서버에서 에러가 발생 하였습니다.",
-      });
-    }
-    if (rows.length > 0) {
-      if (encryptPwd === rows[0].u_pwd) {
+  asyncSQL(
+    `SELECT u_password FROM user WHERE u_email = "${email}"`,
+    (err, rows) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생 하였습니다.",
+        });
+      }
+      if (rows.length > 0) {
+        if (encryptPwd === rows[0].u_password) {
+          res.status(200).json({
+            status: "fail",
+            message: "기존 비밀번호와 일치 합니다.",
+          });
+        } else {
+          asyncSQL(
+            `UPDATE user SET u_password = "${encryptPwd}" WHERE u_email = "${email}"`,
+            (err1, rows1) => {
+              if (err1) {
+                console.log(err1);
+                res.status(500).json({
+                  status: "fail",
+                  message: "서버에서 에러가 발생 하였습니다.",
+                });
+              } else if (rows1.affectedRows > 0) {
+                res.status(200).json({
+                  status: "success",
+                  message: "성공적으로 바뀌었습니다.",
+                });
+              } else {
+                res.status(200).json({
+                  status: "fail",
+                  message: "이메일을 찾을 수 없습니다.",
+                });
+              }
+            }
+          );
+        }
+      } else {
         res.status(200).json({
           status: "fail",
-          message: "기존 비밀번호와 일치 합니다.",
+          message: "이메일을 찾을 수 없습니다.",
         });
-      } else {
-        asyncSQL(
-          `UPDATE user SET u_pwd = "${encryptPwd}" WHERE u_email = "${email}"`,
-          (err1, rows1) => {
-            if (err1) {
-              console.log(err1);
-              res.status(500).json({
-                status: "fail",
-                message: "서버에서 에러가 발생 하였습니다.",
-              });
-            } else if (rows1.affectedRows > 0) {
-              res.status(200).json({
-                status: "success",
-                message: "성공적으로 바뀌었습니다.",
-              });
-            } else {
-              res.status(200).json({
-                status: "fail",
-                message: "이메일을 찾을 수 없습니다.",
-              });
-            }
-          }
-        );
       }
-    } else {
-      res.status(200).json({
-        status: "fail",
-        message: "이메일을 찾을 수 없습니다.",
-      });
     }
-  });
+  );
 });
 
 //프로필 이미지 받기
@@ -306,4 +308,3 @@ router.delete("/profile-image/:userId", async (req, res) => {
 });
 
 module.exports = router;
-
