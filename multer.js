@@ -1,6 +1,6 @@
 const { S3Client } = require("@aws-sdk/client-s3");
 const multer = require("multer");
-const multerS3 = require("multer-s3-transform");
+const multerS3 = require("multer-s3");
 const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 
@@ -13,7 +13,6 @@ const storage = multerS3({
     },
   }),
   bucket: process.env.BUCKET_NAME,
-  acl: "public-read",
   shouldTransform: function (req, file, cb) {
     cb(null, /^image/i.test(file.mimetype));
   },
