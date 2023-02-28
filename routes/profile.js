@@ -30,19 +30,19 @@ router.get("/get/:uid", async (req, res) => {
     const rows1 = await asyncSQL(`
       SELECT
         COUNT(f_follower) as follower
-      FROM follow
+      FROM Follow
       WHERE f_following = ${uid};
     `);
     const rows2 = await asyncSQL(`
       SELECT
         COUNT(f_following) as following
-      FROM follow
+      FROM Follow
       WHERE f_follower = ${uid};
     `);
     const rows3 = await asyncSQL(`
       SELECT
         f_id
-      FROM follow
+      FROM Follow
       WHERE f_follower = ${uid} AND f_following = ${getId};
     `);
 
@@ -68,7 +68,6 @@ router.get("/get/:uid", async (req, res) => {
   }
 });
 
-
 // 팔로워 조회
 // 한번에 10개 씩, 페이징
 router.get("/follower/:uid", (req, res) => {
@@ -83,7 +82,7 @@ router.get("/follower/:uid", (req, res) => {
       u.u_id,
       u.u_email,
       u.u_img
-    FROM follow f JOIN User u
+    FROM Follow f JOIN User u
     ON f.f_follower = u.u_id
     WHERE f_following = ${uid}
     ORDER BY u.u_email
@@ -119,7 +118,7 @@ router.get("/following/:uid", (req, res) => {
       u.u_id,
       u.u_email,
       u.u_img
-    FROM follow f JOIN User u
+    FROM Follow f JOIN User u
     ON f.f_following = u.u_id
     WHERE f_follower = ${uid}
     ORDER BY u.u_email
@@ -152,7 +151,7 @@ router.post("/follow", (req, res) => {
     `
       SELECT
         f_id
-      FROM follow
+      FROM Follow
       WHERE f_follower = ${follower} 
         AND f_following = ${following};
     `
@@ -161,7 +160,7 @@ router.post("/follow", (req, res) => {
       if (rows.length === 0) {
         asyncSQL(`
         INSERT INTO 
-          follow (f_follower, f_following)
+          Follow (f_follower, f_following)
         VALUES
           ("${follower}", ${following})
         `)
@@ -204,7 +203,7 @@ router.delete("/unfollow", (req, res) => {
   if (!follower || !following) res.status(400).end();
 
   asyncSQL(
-    `DELETE FROM follow WHERE f_follower = ${follower} AND f_following = ${following}; `
+    `DELETE FROM Follow WHERE f_follower = ${follower} AND f_following = ${following}; `
   )
     .then(() => {
       res.status(200).json({

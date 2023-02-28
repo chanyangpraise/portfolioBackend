@@ -256,7 +256,7 @@ router.get("/get/count/:uid", (req, res) => {
   asyncSQL(
     `
     SELECT
-      COUNT (b_id) as count
+      COUNT(b_id) as count
     FROM Board
     WHERE b_uid = ${uid};
   `,
