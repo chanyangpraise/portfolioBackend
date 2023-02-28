@@ -287,7 +287,7 @@ router.post("/like", (req, res) => {
   }
 
   asyncSQL(`
-    INSERT INTO \`like\` (bl_bid, bl_uid) VALUES (${bid}, ${uid})
+    INSERT INTO \`B_Like\` (bl_bid, bl_uid) VALUES (${bid}, ${uid})
   `)
     .then(() => {
       res.status(201).json({
@@ -311,7 +311,7 @@ router.delete("/like/:bid/:uid", async (req, res) => {
   const { bid, uid } = req.params;
 
   asyncSQL(
-    `DELETE FROM like
+    `DELETE FROM B_Like
      WHERE bl_bid = ${bid} AND bl_uid = ${uid}`
   )
     .then((result) => {
@@ -346,7 +346,7 @@ router.get("/like/count", (req, res) => {
   }
 
   asyncSQL(`
-    SELECT COUNT(*) as count FROM \`like\` WHERE bl_bid = ${bid}
+    SELECT COUNT(*) as count FROM \`b_Like\` WHERE bl_bid = ${bid}
   `)
     .then(([row]) => {
       res.status(200).json({
