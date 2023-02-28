@@ -4,7 +4,7 @@ const asyncSQL = require("../functions/db");
 const router = express.Router();
 
 // 프로필 조회
-// 이름, 닉네임, 팔로워, 팔로잉
+// 이메일, 팔로워, 팔로잉
 router.get("/get/:uid", (req, res) => {
   const { uid } = req.params;
   const { getId } = req.query;
@@ -15,8 +15,8 @@ router.get("/get/:uid", (req, res) => {
   asyncSQL(
     `
     SELECT
-      u_nick,
-      u_name
+      u_email,
+      u_img
     FROM user
     WHERE u_id = ${uid};
   `,
@@ -33,9 +33,9 @@ router.get("/get/:uid", (req, res) => {
         asyncSQL(
           `
           SELECT
-            COUNT ( f_er ) as follower
+            COUNT ( f_follower ) as follower
           FROM follow
-          WHERE f_ing = ${uid};
+          WHERE f_following = ${uid};
         `,
           (err1, rows1) => {
             if (err1) {
@@ -50,9 +50,9 @@ router.get("/get/:uid", (req, res) => {
               asyncSQL(
                 `
                 SELECT
-                  COUNT(f_ing) as following
+                  COUNT(f_following) as following
                 FROM follow
-                WHERE f_er = ${uid};
+                WHERE f_follower = ${uid};
               `,
                 (err2, rows2) => {
                   if (err2) {
@@ -69,7 +69,7 @@ router.get("/get/:uid", (req, res) => {
                       SELECT
                         f_id
                       FROM follow
-                      WHERE f_er = ${uid} AND f_ing = ${getId};
+                      WHERE f_follower = ${uid} AND f_following = ${getId};
                     `,
                       (err3, rows3) => {
                         if (err3) {
@@ -84,8 +84,8 @@ router.get("/get/:uid", (req, res) => {
                           res.status(200).json({
                             status: "success",
                             info: {
-                              name: rows[0].u_name,
-                              nick: rows[0].u_nick,
+                              email: rows[0].u_email,
+                              uimg: rows[0].u_img,
                               follower: rows1[0].follower,
                               following: rows2[0].following,
                               isFollow: true,
@@ -95,8 +95,8 @@ router.get("/get/:uid", (req, res) => {
                           res.status(200).json({
                             status: "success",
                             info: {
-                              name: rows[0].u_name,
-                              nick: rows[0].u_nick,
+                              email: rows[0].u_email,
+                              uimg: rows[0].u_img,
                               follower: rows1[0].follower,
                               following: rows2[0].following,
                               isFolloow: false,
@@ -134,11 +134,12 @@ router.get("/follower/:uid", (req, res) => {
     `
     SELECT
       u.u_id,
-      u.u_nick
+      u.u_email
+      u.u_img
     FROM follow f JOIN user u
-    ON f.f_er = u.u_id
-    WHERE f_ing = ${uid}
-    ORDER BY u.u_nick
+    ON f.f_follower = u.u_id
+    WHERE f_following = ${uid}
+    ORDER BY u.u_email
     LIMIT ${page * count}, ${count};
   `,
     (err, rows) => {
@@ -172,11 +173,12 @@ router.get("/following/:uid", (req, res) => {
     `
     SELECT
       u.u_id,
-      u.u_nick
+      u.u_email
+      u.u_img
     FROM follow f JOIN user u
-    ON f.f_ing = u.u_id
-    WHERE f_er = ${uid}
-    ORDER BY u.u_nick
+    ON f.f_following = u.u_id
+    WHERE f_follower = ${uid}
+    ORDER BY u.u_email
     LIMIT ${page * count}, ${count}
   `,
     (err, rows) => {
@@ -209,8 +211,8 @@ router.post("/follow", (req, res) => {
       SELECT
         f_id
       FROM follow
-      WHERE f_er = ${follower} 
-        AND f_ing = ${following};
+      WHERE f_follower = ${follower} 
+        AND f_following = ${following};
     `,
     (err, rows) => {
       if (err) {
@@ -225,7 +227,7 @@ router.post("/follow", (req, res) => {
         asyncSQL(
           `
             INSERT INTO 
-              follow (f_er, f_ing)
+              follow (f_follower, f_following)
             VALUES
               ("${follower}", ${following})
             `,
@@ -265,7 +267,7 @@ router.delete("/unfollow", (req, res) => {
     `
     DELETE
     FROM follow
-    WHERE f_er = ${follower} AND f_ing = ${following};
+    WHERE f_follower = ${follower} AND f_following = ${following};
   `,
     (err) => {
       if (err) {
@@ -280,6 +282,66 @@ router.delete("/unfollow", (req, res) => {
         res.status(200).json({
           status: "success",
           message: "성공되었습니다.",
+        });
+      }
+    }
+  );
+});
+
+//팔로워 카운트
+router.get("/follower/count/:uid", (req, res) => {
+  const { uid } = req.params;
+  if (!uid) res.status(400).end();
+
+  asyncSQL(
+    `
+    SELECT COUNT(*) AS count
+    FROM follow
+    WHERE f_following = ${uid}
+  `,
+    (err, rows) => {
+      if (err) {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생 하였습니다.",
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.error(err);
+        }
+      } else {
+        res.status(200).json({
+          status: "success",
+          count: rows[0].count,
+        });
+      }
+    }
+  );
+});
+
+//팔로잉 카운트
+router.get("/following/count/:uid", (req, res) => {
+  const { uid } = req.params;
+  if (!uid) res.status(400).end();
+
+  asyncSQL(
+    `
+    SELECT COUNT(*) AS count
+    FROM follow
+    WHERE f_follower = ${uid}
+  `,
+    (err, rows) => {
+      if (err) {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 에러가 발생 하였습니다.",
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.error(err);
+        }
+      } else {
+        res.status(200).json({
+          status: "success",
+          count: rows[0].count,
         });
       }
     }
