@@ -347,4 +347,32 @@ router.delete("/like/:bid/:uid", async (req, res) => {
     });
 });
 
+//게시글 좋아요 카운트
+router.get("/like/count", (req, res) => {
+  const { bid } = req.query;
+  if (!bid) {
+    res.status(400).end();
+  }
+
+  asyncSQL(`
+    SELECT COUNT(*) as count FROM \`like\` WHERE bl_bid = ${bid}
+  `)
+    .then(([row]) => {
+      res.status(200).json({
+        status: "success",
+        count: row.count,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+
 module.exports = router;
