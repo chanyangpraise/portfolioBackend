@@ -181,7 +181,6 @@ router.get("/get/main", async (req, res) => {
         b.b_date as date,
         a.u_id as uid,
         a.u_img as uimg,
-        a.u_name as username
       FROM Board b JOIN user a
       ON b.b_uid = a.u_id
       ORDER BY b_date DESC
