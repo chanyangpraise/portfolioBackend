@@ -223,60 +223,60 @@ router.delete("/unfollow", (req, res) => {
     });
 });
 
-//팔로워 카운트
-router.get("/follower/count/:uid", (req, res) => {
-  const { uid } = req.params;
-  if (!uid) res.status(400).end();
+// //팔로워 카운트
+// router.get("/follower/count/:uid", (req, res) => {
+//   const { uid } = req.params;
+//   if (!uid) res.status(400).end();
 
-  asyncSQL(
-    `
-    SELECT COUNT(*) AS count
-    FROM follow
-    WHERE f_following = ${uid}
-  `
-  )
-    .then((rows) => {
-      res.status(200).json({
-        status: "success",
-        count: rows[0].count,
-      });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: "fail",
-        message: "서버에서 에러가 발생 하였습니다.",
-      });
-      if (process.env.NODE_ENV === "development") {
-        console.error(err);
-      }
-    });
-});
+//   asyncSQL(
+//     `
+//     SELECT COUNT(*) AS count
+//     FROM follow
+//     WHERE f_following = ${uid}
+//   `
+//   )
+//     .then((rows) => {
+//       res.status(200).json({
+//         status: "success",
+//         count: rows[0].count,
+//       });
+//     })
+//     .catch((err) => {
+//       res.status(500).json({
+//         status: "fail",
+//         message: "서버에서 에러가 발생 하였습니다.",
+//       });
+//       if (process.env.NODE_ENV === "development") {
+//         console.error(err);
+//       }
+//     });
+// });
 
-//팔로잉 카운트
-router.get("/following/count/:uid", (req, res) => {
-  const { uid } = req.params;
-  if (!uid) res.status(400).end();
+// //팔로잉 카운트
+// router.get("/following/count/:uid", (req, res) => {
+//   const { uid } = req.params;
+//   if (!uid) res.status(400).end();
 
-  asyncSQL(`
-    SELECT COUNT(*) AS count
-    FROM follow
-    WHERE f_follower = ${uid}
-  `)
-    .then((rows) => {
-      res.status(200).json({
-        status: "success",
-        count: rows[0].count,
-      });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: "fail",
-        message: "서버에서 에러가 발생 하였습니다.",
-      });
-      if (process.env.NODE_ENV === "development") {
-        console.error(err);
-      }
-    });
-});
+//   asyncSQL(`
+//     SELECT COUNT(*) AS count
+//     FROM follow
+//     WHERE f_follower = ${uid}
+//   `)
+//     .then((rows) => {
+//       res.status(200).json({
+//         status: "success",
+//         count: rows[0].count,
+//       });
+//     })
+//     .catch((err) => {
+//       res.status(500).json({
+//         status: "fail",
+//         message: "서버에서 에러가 발생 하였습니다.",
+//       });
+//       if (process.env.NODE_ENV === "development") {
+//         console.error(err);
+//       }
+//     });
+// });
 
 module.exports = router;
