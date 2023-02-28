@@ -299,4 +299,68 @@ router.delete("/delete/:bid", async (req, res) => {
     });
 });
 
+//프로필 조회 프로미스문 테스트
+router.get("/get/:uid", async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { getId } = req.query;
+    if (!uid || !getId) {
+      return res.status(400).end();
+    }
+
+    const rows = await asyncSQL(`
+      SELECT
+        u_email,
+        u_img
+      FROM user
+      WHERE u_id = ${uid};
+    `);
+    if (rows.length === 0) {
+      return res.status(200).json({
+        status: "fail",
+        message: "사용자가 존재하지 않습니다.",
+      });
+    }
+
+    const rows1 = await asyncSQL(`
+      SELECT
+        COUNT(f_follower) as follower
+      FROM follow
+      WHERE f_following = ${uid};
+    `);
+    const rows2 = await asyncSQL(`
+      SELECT
+        COUNT(f_following) as following
+      FROM follow
+      WHERE f_follower = ${uid};
+    `);
+    const rows3 = await asyncSQL(`
+      SELECT
+        f_id
+      FROM follow
+      WHERE f_follower = ${uid} AND f_following = ${getId};
+    `);
+
+    const info = {
+      email: rows[0].u_email,
+      uimg: rows[0].u_img,
+      follower: rows1[0].follower,
+      following: rows2[0].following,
+      isFollow: rows3.length > 0,
+    };
+    return res.status(200).json({
+      status: "success",
+      info,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생 하였습니다.",
+    });
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
+    }
+  }
+});
+
 module.exports = router;
