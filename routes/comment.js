@@ -185,4 +185,30 @@ router.delete("/delete/:cid", async (req, res) => {
   }
 });
 
+//게시글에 달린 댓글 카운트
+router.get("/get/count/:bid", async (req, res) => {
+  const { bid } = req.params;
+  if (!bid) {
+    res.status(400).end();
+    return;
+  }
+  try {
+    const rows = await asyncQuery(
+      `SELECT COUNT(c_id) as count FROM Comment WHERE c_bid = ${bid};`
+    );
+    res.status(200).json({
+      status: "success",
+      count: rows[0].count,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생 하였습니다.",
+    });
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
+    }
+  }
+});
+
 module.exports = router;
