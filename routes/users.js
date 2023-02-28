@@ -5,7 +5,7 @@ const upload = require("../functions/multer");
 const { encrypt } = require("../functions/encrypt");
 const router = express.Router();
 
-//이메일 인증
+//이메일 인증 및 발송
 router.get("/", (req, res) => {
   res.send("respond with a resource");
 });
@@ -14,49 +14,54 @@ router.post("/auth_mail", (req, res) => {
   const { email } = req.body;
   const rnd = randomNumber();
 
-  asyncSQL(
-    `INSERT INTO auth (a_email, a_digit) VALUES ("${email}", "${rnd}");`,
-    (err, rows) => {
-      if (err || rows.affectedRows < 1) {
+  asyncSQL(`INSERT INTO auth (a_email, a_digit) VALUES ("${email}", "${rnd}");`)
+    .then((rows) => {
+      if (rows.affectedRows < 1) {
         res.status(500).json({
           status: "fail",
           message: "서버에서 에러가 발생 했습니다.",
         });
       } else {
-        sendMail(email, rnd, (err1) => {
-          if (err1) {
-            res.status(500).json({
-              status: "fail",
-              message: "서버에서 에러가 발생 하였습니다.",
-            });
-          } else {
+        sendMail(email, rnd)
+          .then(() => {
             res.status(201).json({
               status: "success",
               message: "성공되었습니다.",
             });
-          }
-        });
+          })
+          .catch(() => {
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생 하였습니다.",
+            });
+          });
       }
-    }
-  );
+    })
+    .catch(() => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
+      });
+    });
 });
 
-//이메일 인증
+//이메일 인증번호 대조
 router.get("/auth_valid", (req, res) => {
   const { email, digit } = req.query;
   asyncSQL(
-    `SELECT a_id, a_digit FROM auth WHERE a_email = "${email}" AND a_is_used = 0 ORDER BY a_id DESC LIMIT 1`,
-    (err, rows) => {
+    `SELECT a_id, a_digit FROM auth WHERE a_email = "${email}" AND a_is_used = 0 ORDER BY a_id DESC LIMIT 1`
+  )
+    .then((rows) => {
       console.log(rows);
-      if (err || rows.length < 1) {
-        res
-          .status(500)
-          .json({ status: "fail", message: "서버에서 오류가 발생했습니다." });
+      if (rows.length < 1) {
+        res.status(500).json({
+          status: "fail",
+          message: "서버에서 오류가 발생했습니다.",
+        });
       } else if (digit.toString() === rows[0].a_digit.toString()) {
-        asyncSQL(
-          `UPDATE auth SET a_is_used = 1 WHERE a_id = ${rows[0].a_id}`,
-          (err1, rows1) => {
-            if (err1 || rows1.affectedRows < 1) {
+        asyncSQL(`UPDATE auth SET a_is_used = 1 WHERE a_id = ${rows[0].a_id}`)
+          .then((rows1) => {
+            if (rows1.affectedRows < 1) {
               res.status(500).json({
                 status: "fail",
                 message: "서버에서 에러가 발생했습니다.",
@@ -67,14 +72,25 @@ router.get("/auth_valid", (req, res) => {
                 message: "일치합니다.",
               });
             }
-          }
-        );
+          })
+          .catch((err1) => {
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생했습니다.",
+            });
+          });
       } else {
         res.status(200).json({ status: "fail", message: "일치하지 않습니다." });
       }
-    }
-  );
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 오류가 발생했습니다.",
+      });
+    });
 });
+
 
 //동일한 이메일이 있을때 가입 X
 router.post("/register", async (req, res) => {
