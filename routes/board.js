@@ -44,24 +44,17 @@ router.post("/write", upload.single("image"), async (req, res) => {
 router.put("/update/:bid", async (req, res) => {
   const bid = req.params.bid;
   const { uid, content } = req.body;
-  if (!uid || !content) {
+  if (!uid) {
     res.status(400).end();
   }
   await asyncSQL(
     `UPDATE Board SET b_comment="${content}" WHERE b_id=${bid} AND b_uid=${uid}`
   )
-    .then((rows) => {
-      if (rows.affectedRows < 1) {
-        res.status(404).json({
-          status: "fail",
-          message: "해당 게시글을 찾을 수 없습니다.",
-        });
-      } else {
-        res.status(200).json({
-          status: "success",
-          message: "게시글이 수정되었습니다.",
-        });
-      }
+    .then(() => {
+      res.status(200).json({
+        status: "success",
+        message: "게시글이 수정되었습니다.",
+      });
     })
     .catch((err) => {
       res.status(500).json({
@@ -73,7 +66,6 @@ router.put("/update/:bid", async (req, res) => {
       }
     });
 });
-
 
 //게시글 삭제
 router.delete("/delete/:bid", async (req, res) => {
@@ -373,6 +365,5 @@ router.get("/like/count", (req, res) => {
       }
     });
 });
-
 
 module.exports = router;
