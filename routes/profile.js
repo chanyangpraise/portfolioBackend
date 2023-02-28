@@ -298,54 +298,52 @@ router.get("/follower/count/:uid", (req, res) => {
     SELECT COUNT(*) AS count
     FROM follow
     WHERE f_following = ${uid}
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          count: rows[0].count,
-        });
+  `
+  )
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        count: rows[0].count,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
       }
-    }
-  );
+    });
 });
+
 
 //팔로잉 카운트
 router.get("/following/count/:uid", (req, res) => {
   const { uid } = req.params;
   if (!uid) res.status(400).end();
 
-  asyncSQL(
-    `
+  asyncSQL(`
     SELECT COUNT(*) AS count
     FROM follow
     WHERE f_follower = ${uid}
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          count: rows[0].count,
-        });
+  `)
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        count: rows[0].count,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
       }
-    }
-  );
+    });
 });
+
 
 module.exports = router;
