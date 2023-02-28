@@ -8,10 +8,10 @@ const router = express.Router();
 //게시글 작성
 router.post("/write", upload.single("image"), async (req, res) => {
   const { uid, content } = req.body;
-  if (!uid || !content) {
+  const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
+  if (!uid || !image) {
     res.status(400).end();
   }
-  const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
   await asyncSQL(
     `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${uid}", "${image}")`
   )
@@ -30,7 +30,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
       }
     })
     .catch((err) => {
-      res.status(500).json({
+      res.status(400).json({
         status: "fail",
         message: "서버에서 에러가 발생 했습니다.",
       });
