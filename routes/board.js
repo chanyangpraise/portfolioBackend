@@ -134,7 +134,7 @@ router.get("/get/:uid", (req, res) => {
       a.u_img as uimg,
       b.b_timg as btimg,
       b.b_date as date
-    FROM Board b JOIN user a
+    FROM Board b JOIN User a
     ON b.b_uid = a.u_id
     WHERE b_uid = "${uid}"
     ORDER BY b_date DESC
@@ -181,7 +181,7 @@ router.get("/get/main", async (req, res) => {
         b.b_date as date,
         a.u_id as uid,
         a.u_img as uimg,
-      FROM Board b JOIN user a
+      FROM Board b JOIN User a
       ON b.b_uid = a.u_id
       ORDER BY b_date DESC
       LIMIT ${page * count}, ${count}`
@@ -217,7 +217,7 @@ router.get("/get/board/:bid", (req, res) => {
       b.b_img as bimg,
       b.b_date as date,
       u.u_img as uimg 
-    FROM Board b JOIN user u
+    FROM Board b JOIN User u
     ON b.b_uid = u.u_id
     WHERE b.b_id = "${bid}"
   `,

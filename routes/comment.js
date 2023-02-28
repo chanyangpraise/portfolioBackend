@@ -27,7 +27,7 @@ router.get("/get/:bid", (req, res) => {
       u.u_email as email,
       c.c_content as content,
       c.c_date as date
-    FROM comment c JOIN user u
+    FROM Comment c JOIN user u
     ON c.c_uid = u.u_id
     WHERE c_bid = "${bid}"
     ORDER BY c.c_date DESC
@@ -59,7 +59,7 @@ router.post("/write", (req, res) => {
   }
 
   asyncSQL(`
-    INSERT INTO comment (c_comment, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
+    INSERT INTO Comment (c_comment, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
   `)
     .then((result) => {
       if (result.affectedRows < 1) {
@@ -98,7 +98,7 @@ router.put("/fix/:cid", (req, res) => {
   asyncSQL(
     `SELECT
       c_uid
-    FROM comment
+    FROM Comment
     WHERE c_id = ${cid}
   `
   )
@@ -107,7 +107,7 @@ router.put("/fix/:cid", (req, res) => {
         if (rows[0].c_uid === Number(userId)) {
           asyncSQL(
             `
-            UPDATE comment SET c_comment = "${content}"
+            UPDATE Comment SET c_comment = "${content}"
             WHERE c_id = "${cid}"
           `
           )
@@ -159,11 +159,11 @@ router.delete("/delete/:cid", async (req, res) => {
 
   try {
     const rows = await asyncSQL(
-      `SELECT c_uid FROM comment WHERE c_id = ${cid}; `
+      `SELECT c_uid FROM Comment WHERE c_id = ${cid}; `
     );
     if (rows.length > 0) {
       if (rows[0].c_uid === Number(uid)) {
-        await asyncSQL(`DELETE FROM comment WHERE c_id = "${cid}"; `);
+        await asyncSQL(`DELETE FROM Comment WHERE c_id = "${cid}"; `);
         res.status(200).json({
           status: "success",
           message: "성공적으로 바뀌었습니다.",

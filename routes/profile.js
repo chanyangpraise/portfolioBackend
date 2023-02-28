@@ -17,7 +17,7 @@ router.get("/get/:uid", async (req, res) => {
       SELECT
         u_email,
         u_img
-      FROM user
+      FROM User
       WHERE u_id = ${uid};
     `);
     if (rows.length === 0) {
@@ -83,7 +83,7 @@ router.get("/follower/:uid", (req, res) => {
       u.u_id,
       u.u_email,
       u.u_img
-    FROM follow f JOIN user u
+    FROM follow f JOIN User u
     ON f.f_follower = u.u_id
     WHERE f_following = ${uid}
     ORDER BY u.u_email
@@ -119,7 +119,7 @@ router.get("/following/:uid", (req, res) => {
       u.u_id,
       u.u_email,
       u.u_img
-    FROM follow f JOIN user u
+    FROM follow f JOIN User u
     ON f.f_following = u.u_id
     WHERE f_follower = ${uid}
     ORDER BY u.u_email

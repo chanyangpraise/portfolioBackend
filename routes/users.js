@@ -14,7 +14,7 @@ router.post("/auth_mail", (req, res) => {
   const { email } = req.body;
   const rnd = randomNumber();
 
-  asyncSQL(`INSERT INTO auth (a_email, a_digit) VALUES ("${email}", "${rnd}");`)
+  asyncSQL(`INSERT INTO Auth (a_email, a_digit) VALUES ("${email}", "${rnd}");`)
     .then((rows) => {
       if (rows.affectedRows < 1) {
         res.status(500).json({
@@ -49,7 +49,7 @@ router.post("/auth_mail", (req, res) => {
 router.get("/auth_valid", (req, res) => {
   const { email, digit } = req.query;
   asyncSQL(
-    `SELECT a_id, a_digit FROM auth WHERE a_email = "${email}" AND a_is_used = 0 ORDER BY a_id DESC LIMIT 1`
+    `SELECT a_id, a_digit FROM Auth WHERE a_email = "${email}" AND a_used = 0 ORDER BY a_id DESC LIMIT 1`
   )
     .then((rows) => {
       console.log(rows);
@@ -59,7 +59,7 @@ router.get("/auth_valid", (req, res) => {
           message: "서버에서 오류가 발생했습니다.",
         });
       } else if (digit.toString() === rows[0].a_digit.toString()) {
-        asyncSQL(`UPDATE auth SET a_is_used = 1 WHERE a_id = ${rows[0].a_id}`)
+        asyncSQL(`UPDATE Auth SET a_used = 1 WHERE a_id = ${rows[0].a_id}`)
           .then((rows1) => {
             if (rows1.affectedRows < 1) {
               res.status(500).json({
@@ -99,7 +99,7 @@ router.post("/register", async (req, res) => {
 
   try {
     const rows = await asyncSQL(
-      `SELECT u_email FROM user WHERE u_email = "${email}"`
+      `SELECT u_email FROM User WHERE u_email = "${email}"`
     );
     if (rows.length > 0) {
       res.status(200).json({
@@ -108,7 +108,7 @@ router.post("/register", async (req, res) => {
       });
     } else {
       const rows1 = await asyncSQL(
-        `INSERT INTO user (u_email, u_password, u_phone) VALUES ("${email}", "${encryptPwd}", "${phone}");`
+        `INSERT INTO User (u_email, u_password, u_phone) VALUES ("${email}", "${encryptPwd}", "${phone}");`
       );
       if (rows1.affectedRows < 1) {
         res.status(500).json({
@@ -138,7 +138,7 @@ router.post("/login", (req, res) => {
   const encryptPwd = encrypt(pwd);
 
   asyncSQL(
-    `SELECT u_id, u_password, u_img FROM user WHERE u_email = "${email}";`
+    `SELECT u_id, u_password, u_img FROM User WHERE u_email = "${email}";`
   )
     .then((rows) => {
       if (rows.length > 0) {
@@ -186,7 +186,7 @@ router.put("/changePwd", (req, res) => {
   }
   const encryptPwd = encrypt(pwd);
 
-  asyncSQL(`SELECT u_password FROM user WHERE u_email = "${email}"`)
+  asyncSQL(`SELECT u_password FROM User WHERE u_email = "${email}"`)
     .then((rows) => {
       if (rows.length > 0) {
         if (encryptPwd === rows[0].u_password) {
@@ -196,7 +196,7 @@ router.put("/changePwd", (req, res) => {
           });
         } else {
           return asyncSQL(
-            `UPDATE user SET u_password = "${encryptPwd}" WHERE u_email = "${email}"`
+            `UPDATE User SET u_password = "${encryptPwd}" WHERE u_email = "${email}"`
           );
         }
       } else {
@@ -236,7 +236,7 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     const { userId } = req.body;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
-    const sql = "UPDATE user SET u_img = ? WHERE id = ?";
+    const sql = "UPDATE User SET u_img = ? WHERE id = ?";
     const result = await db.query(sql, [filename, userId]);
 
     if (result.affectedRows === 0) {
@@ -260,7 +260,7 @@ router.put(
       const { userId } = req.params;
 
       // 이전 프로필 이미지 삭제
-      const sql = "SELECT u_img FROM user WHERE id = ?";
+      const sql = "SELECT u_img FROM User WHERE id = ?";
       const [rows] = await db.query(sql, userId);
 
       if (rows.length === 0) {
@@ -270,7 +270,7 @@ router.put(
       await deleteProfileImage(rows[0]);
 
       // 새로운 프로필 이미지 업데이트
-      const updateSql = "UPDATE user SET u_img = ? WHERE id = ?";
+      const updateSql = "UPDATE User SET u_img = ? WHERE id = ?";
       const result = await db.query(updateSql, [filename, userId]);
 
       if (result.affectedRows === 0) {
@@ -291,7 +291,7 @@ router.delete("/profile-image/:userId", async (req, res) => {
     const { userId } = req.params;
 
     // 사용자 정보를 가져오는 SQL 쿼리
-    const selectUserSql = "SELECT u_img FROM user WHERE id = ?";
+    const selectUserSql = "SELECT u_img FROM User WHERE id = ?";
     const [rows] = await db.query(selectUserSql, userId);
 
     if (rows.length === 0) {
@@ -301,7 +301,7 @@ router.delete("/profile-image/:userId", async (req, res) => {
     const user = rows[0];
 
     // u_img를 null로 업데이트하는 SQL 쿼리
-    const updateSql = "UPDATE user SET u_img = null WHERE id = ?";
+    const updateSql = "UPDATE User SET u_img = null WHERE id = ?";
     await db.query(updateSql, userId);
 
     // S3에서 이미지 삭제
