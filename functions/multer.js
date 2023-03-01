@@ -1,6 +1,6 @@
 const { S3Client } = require("@aws-sdk/client-s3");
 const multer = require("multer");
-const multerS3 = require("multer-s3");
+const multerS3 = require("multer-s3-transform");
 const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 
@@ -38,7 +38,7 @@ const storage = multerS3({
     {
       id: "u_img",
       key: function (req, file, cb) {
-        const uid = req.user.id;
+        const uid = req.body.userId;
         cb(null, `profile-${uid}-${uuidv4()}-${file.originalname}`);
       },
       transform: function (req, file, cb) {
