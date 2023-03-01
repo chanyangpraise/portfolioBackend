@@ -232,11 +232,12 @@ router.put("/changePwd", (req, res) => {
 //프로필 이미지 받기
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    const { filename } = req.file;
+    const { location } = req.file;
+    console.log(req.file);
     const { userId } = req.body;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
-    const sql = `UPDATE User SET u_img = ${filename} WHERE u_id = ${parseInt(userId)}`;
+    const sql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(userId)}`;
     const result = await asyncSQL(sql);
 
     if (result && result.affectedRows === 0) {
@@ -256,7 +257,7 @@ router.put(
   upload.single("image"),
   async (req, res) => {
     try {
-      const { filename } = req.file;
+      const { location } = req.file;
       const { userId } = req.params;
 
       // 이전 프로필 이미지 삭제
@@ -270,7 +271,7 @@ router.put(
       await deleteProfileImage(rows[0].u_img);
 
       // 새로운 프로필 이미지 업데이트
-      const updateSql = `UPDATE User SET u_img = ${filename} WHERE u_id = ${parseInt(userId)}`;
+      const updateSql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(userId)}`;
       const result = await asyncSQL(updateSql);
 
       if (result.affectedRows === 0) {
