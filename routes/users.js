@@ -263,13 +263,14 @@ router.put(
 
       // 이전 프로필 이미지 삭제
       const sql = `SELECT u_img FROM User WHERE u_id = ${parseInt(userId)}`;
-      const [rows] = await asyncSQL(sql);
+      const rows = await asyncSQL(sql);
 
       if (rows.length === 0) {
         return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
       }
+      const user = { u_img: rows[0].u_img.split("/").pop() };
 
-      await deleteProfileImage(rows[0].u_img);
+      await deleteProfileImage(user);
 
       // 새로운 프로필 이미지 업데이트
       const updateSql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(userId)}`;
@@ -294,13 +295,13 @@ router.delete("/profile-image/:userId", async (req, res) => {
 
     // 사용자 정보를 가져오는 SQL 쿼리
     const selectUserSql = `SELECT u_img FROM User WHERE u_id = ${parseInt(userId)}`;
-    const [rows] = await asyncSQL(selectUserSql);
+    const rows = await asyncSQL(selectUserSql);
 
-    if (rows.length === 0) {
+    if (!rows || rows.length === 0) {
       return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
     }
 
-    const user = { u_img: rows[0].u_img };
+    const user = { u_img: rows[0].u_img.split("/").pop() };
 
     // S3에서 이미지 삭제
     await deleteProfileImage(user);
@@ -315,5 +316,6 @@ router.delete("/profile-image/:userId", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 
 module.exports = router;
