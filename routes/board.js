@@ -16,7 +16,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
     `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${uid}", "${image}")`
   )
     .then((rows) => {
-      if (rows.affectedRows < 1) {
+      if (!rows || rows.insertId < 1) { // rows가 없거나 affectedRows가 1보다 작은 경우
         res.status(500).json({
           status: "fail",
           message: "서버에서 에러가 발생 했습니다.",

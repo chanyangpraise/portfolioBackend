@@ -236,10 +236,10 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     const { userId } = req.body;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
-    const sql = "UPDATE User SET u_img = ? WHERE id = ?";
-    const result = await db.query(sql, [filename, userId]);
+    const sql = `UPDATE User SET u_img = ${filename} WHERE id = ${parseInt(userId)}`;
+    const result = await asyncSQL(sql);
 
-    if (result.affectedRows === 0) {
+    if (result && result.affectedRows === 0) {
       return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
     }
 
@@ -261,17 +261,17 @@ router.put(
 
       // 이전 프로필 이미지 삭제
       const sql = "SELECT u_img FROM User WHERE id = ?";
-      const [rows] = await db.query(sql, userId);
+      const [rows] = await asyncSQL(sql, [userId]);
 
       if (rows.length === 0) {
         return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
       }
 
-      await deleteProfileImage(rows[0]);
+      await deleteProfileImage(rows[0].u_img);
 
       // 새로운 프로필 이미지 업데이트
       const updateSql = "UPDATE User SET u_img = ? WHERE id = ?";
-      const result = await db.query(updateSql, [filename, userId]);
+      const result = await asyncSQL(updateSql, [filename, userId]);
 
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
@@ -292,7 +292,7 @@ router.delete("/profile-image/:userId", async (req, res) => {
 
     // 사용자 정보를 가져오는 SQL 쿼리
     const selectUserSql = "SELECT u_img FROM User WHERE id = ?";
-    const [rows] = await db.query(selectUserSql, userId);
+    const [rows] = await asyncSQL(selectUserSql, [userId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
@@ -302,10 +302,10 @@ router.delete("/profile-image/:userId", async (req, res) => {
 
     // u_img를 null로 업데이트하는 SQL 쿼리
     const updateSql = "UPDATE User SET u_img = null WHERE id = ?";
-    await db.query(updateSql, userId);
+    await asyncSQL(updateSql, [userId]);
 
     // S3에서 이미지 삭제
-    await deleteProfileImage(user);
+    await deleteProfileImage(user.u_img);
 
     res.status(200).json({ message: "프로필 이미지 삭제 성공" });
   } catch (err) {
