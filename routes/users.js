@@ -3,6 +3,7 @@ const { sendMail, randomNumber } = require("../functions/mail");
 const asyncSQL = require("../functions/db");
 const upload = require("../functions/multer");
 const { encrypt } = require("../functions/encrypt");
+const { deleteProfileImage } = require("../functions/delete");
 const router = express.Router();
 
 //이메일 인증 및 발송
@@ -299,14 +300,14 @@ router.delete("/profile-image/:userId", async (req, res) => {
       return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
     }
 
-    const user = rows[0];
+    const user = { u_img: rows[0].u_img };
+
+    // S3에서 이미지 삭제
+    await deleteProfileImage(user);
 
     // u_img를 null로 업데이트하는 SQL 쿼리
     const updateSql = `UPDATE User SET u_img = null WHERE u_id = ${parseInt(userId)}`;
     await asyncSQL(updateSql);
-
-    // S3에서 이미지 삭제
-    await deleteProfileImage(user.u_img);
 
     res.status(200).json({ message: "프로필 이미지 삭제 성공" });
   } catch (err) {

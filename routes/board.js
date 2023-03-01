@@ -1,7 +1,8 @@
 const express = require("express");
 const asyncSQL = require("../functions/db");
 const upload = require("../functions/multer");
-const deleteBoardImages = require("../functions/delete");
+const { deleteBoardImages } = require("../functions/delete");
+
 
 const router = express.Router();
 
