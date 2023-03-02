@@ -3,7 +3,6 @@ const asyncSQL = require("../functions/db");
 const upload = require("../functions/multer");
 const { deleteBoardImages } = require("../functions/delete");
 
-
 const router = express.Router();
 
 //게시글 작성
@@ -16,7 +15,9 @@ router.post("/write", upload.single("image"), async (req, res) => {
   const { location } = req.file;
 
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${parseInt(uid)}", "${location}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${parseInt(
+      uid
+    )}", "${location}")`
   )
     .then((rows) => {
       if (!rows || rows.insertId < 1) {
@@ -225,98 +226,121 @@ router.get("/get/board/:bid", (req, res) => {
     FROM Board b JOIN User u
     ON b.b_uid = u.u_id
     WHERE b.b_id = "${bid}"
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else if (rows.length > 0) {
+  `
+  )
+    .then((rows) => {
+      if (rows.length > 0) {
         res.status(200).json({
           status: "success",
-          // content: rows,
           bid: rows[0].bid,
           content: rows[0].content,
           date: rows[0].date,
         });
       } else {
-        res.status(200).json({
+        res.status(404).json({
           status: "fail",
           message: "데이터가 없습니다.",
         });
       }
-    }
-  );
+    })
+    .catch((err) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+    });
 });
 
 //게시글 갯수 카운트
 router.get("/get/count/:uid", (req, res) => {
   const { uid } = req.params;
-  if (!uid) res.status(400).end();
+  if (!uid) {
+    return res.status(400).end();
+  }
 
-  asyncSQL(
-    `
-    SELECT
-      COUNT(b_id) as count
+  asyncSQL(`
+    SELECT COUNT(b_id) as count
     FROM Board
     WHERE b_uid = ${uid};
-  `,
-    (err, rows) => {
-      if (err) {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      } else {
-        res.status(200).json({
-          status: "success",
-          count: rows[0].count,
-        });
+  `)
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        count: rows[0].count,
+      });
+    })
+    .catch((err) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
       }
-    }
-  );
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+    });
 });
+
 
 //좋아요 추가
 router.post("/like", (req, res) => {
   const { uid, bid } = req.body;
   if (!uid || !bid) {
-    res.status(400).end();
+    return res.status(400).end();
   }
 
   asyncSQL(`
-    INSERT INTO \`B_Like\` (bl_bid, bl_uid) VALUES (${bid}, ${uid})
+    SELECT * FROM \`b_Like\` WHERE bl_bid="${bid}" AND bl_uid="${uid}"
   `)
-    .then(() => {
-      res.status(201).json({
-        status: "success",
-        message: "좋아요가 등록되었습니다.",
-      });
+    .then((rows) => {
+      if (rows.length > 0) {
+        // 이미 좋아요를 누른 경우
+        res.status(200).json({
+          status: "fail",
+          message: "이미 좋아요를 누르셨습니다.",
+        });
+      } else {
+        // 좋아요를 누르지 않은 경우, 새로운 좋아요 등록
+        asyncSQL(`
+          INSERT INTO \`b_Like\` (bl_bid, bl_uid) VALUES ("${bid}", "${uid}")
+        `)
+          .then(() => {
+            res.status(201).json({
+              status: "success",
+              message: "좋아요가 등록되었습니다.",
+            });
+          })
+          .catch((err) => {
+            if (process.env.NODE_ENV === "development") {
+              console.error(err);
+            }
+            res.status(500).json({
+              status: "fail",
+              message: "서버에서 에러가 발생 했습니다.",
+            });
+          });
+      }
     })
     .catch((err) => {
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
       res.status(500).json({
         status: "fail",
         message: "서버에서 에러가 발생 했습니다.",
       });
-      if (process.env.NODE_ENV === "development") {
-        console.error(err);
-      }
     });
 });
+
 
 //좋아요 취소
 router.delete("/like/:bid/:uid", async (req, res) => {
   const { bid, uid } = req.params;
 
   asyncSQL(
-    `DELETE FROM B_Like
+    `DELETE FROM b_Like
      WHERE bl_bid = ${bid} AND bl_uid = ${uid}`
   )
     .then((result) => {
@@ -336,6 +360,34 @@ router.delete("/like/:bid/:uid", async (req, res) => {
       res.status(500).json({
         status: "fail",
         message: "서버에서 에러가 발생하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
+// 해당 게시글의 좋아요 여부 확인
+router.get("/like/check", (req, res) => {
+  const { uid, bid } = req.query;
+  if (!uid || !bid) {
+    return res.status(400).end();
+  }
+
+  asyncSQL(`
+    SELECT COUNT(*) as count FROM \`b_Like\` WHERE bl_bid = ${bid} AND bl_uid = ${uid}
+  `)
+    .then(([row]) => {
+      const isLiked = row.count > 0;
+      res.status(200).json({
+        status: "success",
+        isLiked: isLiked,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 했습니다.",
       });
       if (process.env.NODE_ENV === "development") {
         console.error(err);
