@@ -230,7 +230,6 @@ router.put("/changePwd", (req, res) => {
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
     const { location } = req.file;
-    console.log(req.file);
     const { userId } = req.body;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
