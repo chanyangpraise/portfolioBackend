@@ -9,15 +9,18 @@ const router = express.Router();
 //게시글 작성
 router.post("/write", upload.single("image"), async (req, res) => {
   const { uid, content } = req.body;
-  const image = req.file ? req.file.location : null; // 업로드된 파일의 경로
-  if (!uid || !image) {
+  if (!uid || !req.file) {
     res.status(400).end();
+    return;
   }
+  const { location } = req.file;
+
   await asyncSQL(
-    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${uid}", "${image}")`
+    `INSERT INTO Board (b_comment, b_uid, b_img) VALUES ("${content}", "${parseInt(uid)}", "${location}")`
   )
     .then((rows) => {
-      if (!rows || rows.insertId < 1) { // rows가 없거나 affectedRows가 1보다 작은 경우
+      if (!rows || rows.insertId < 1) {
+        // rows가 없거나 affectedRows가 1보다 작은 경우
         res.status(500).json({
           status: "fail",
           message: "서버에서 에러가 발생 했습니다.",
@@ -80,7 +83,8 @@ router.delete("/delete/:bid", async (req, res) => {
           message: "해당 게시글을 찾을 수 없습니다.",
         });
       } else {
-        await deleteBoardImages(rows[0]);
+        const board = { b_img: rows[0].b_img.split("/").pop() };
+        await deleteBoardImages(board);
         await asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
           .then((result) => {
             res.status(200).json({
@@ -133,7 +137,7 @@ router.get("/get/:uid", (req, res) => {
       b.b_comment as content,
       a.u_email as email,
       a.u_img as uimg,
-      b.b_timg as btimg,
+      b.b_img as bimg,
       b.b_date as date
     FROM Board b JOIN User a
     ON b.b_uid = a.u_id
@@ -178,7 +182,7 @@ router.get("/get/main", async (req, res) => {
     `SELECT 
         b.b_id as bid,
         b.b_comment as content,
-        b.b_timg as btimg,
+        b.b_img as bimg,
         b.b_date as date,
         a.u_id as uid,
         a.u_img as uimg,

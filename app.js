@@ -3,6 +3,7 @@ const path = require("path");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const cors = require("cors");
+const bodyParser = require("body-parser");
 require("dotenv").config();
 
 const indexRouter = require("./routes/index");
@@ -17,6 +18,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname + "/../Frontend/build")));
+// json 형식의 요청 body를 파싱
+app.use(bodyParser.json({ limit: "100mb" }));
+// urlencoded 형식의 요청 body를 파싱
+app.use(bodyParser.urlencoded({ extended: true, limit: "100mb" }));
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
