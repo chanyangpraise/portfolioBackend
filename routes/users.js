@@ -179,7 +179,7 @@ router.post("/login", (req, res) => {
 router.put("/changePwd", (req, res) => {
   const { email, pwd } = req.body;
   if (!email || !pwd) {
-    res.status(400).json({
+    return res.status(400).json({
       status: "fail",
     });
   }
@@ -189,30 +189,29 @@ router.put("/changePwd", (req, res) => {
     .then((rows) => {
       if (rows.length > 0) {
         if (encryptPwd === rows[0].u_password) {
-          res.status(200).json({
+          return res.status(200).json({
             status: "fail",
             message: "기존 비밀번호와 일치 합니다.",
           });
         } else {
           return asyncSQL(
             `UPDATE User SET u_password = "${encryptPwd}" WHERE u_email = "${email}"`
-          );
+          ).then((result) => {
+            if (result && result.affectedRows > 0) {
+              return res.status(200).json({
+                status: "success",
+                message: "성공적으로 바뀌었습니다.",
+              });
+            } else {
+              return res.status(200).json({
+                status: "fail",
+                message: "이메일을 찾을 수 없습니다.",
+              });
+            }
+          });
         }
       } else {
-        res.status(200).json({
-          status: "fail",
-          message: "이메일을 찾을 수 없습니다.",
-        });
-      }
-    })
-    .then((result) => {
-      if (result && result.affectedRows > 0) {
-        res.status(200).json({
-          status: "success",
-          message: "성공적으로 바뀌었습니다.",
-        });
-      } else {
-        res.status(200).json({
+        return res.status(200).json({
           status: "fail",
           message: "이메일을 찾을 수 없습니다.",
         });
@@ -220,7 +219,7 @@ router.put("/changePwd", (req, res) => {
     })
     .catch((err) => {
       console.log(err);
-      res.status(500).json({
+      return res.status(500).json({
         status: "fail",
         message: "서버에서 에러가 발생 하였습니다.",
       });
