@@ -25,9 +25,9 @@ router.get("/get/:bid", (req, res) => {
       u.u_id as uid,
       u.u_img as uimg,
       u.u_email as email,
-      c.c_content as content,
+      c.c_comment as content,
       c.c_date as date
-    FROM Comment c JOIN user u
+    FROM Comment c JOIN User u
     ON c.c_uid = u.u_id
     WHERE c_bid = "${bid}"
     ORDER BY c.c_date DESC
