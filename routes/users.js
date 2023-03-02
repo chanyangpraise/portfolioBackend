@@ -92,7 +92,6 @@ router.get("/auth_valid", (req, res) => {
     });
 });
 
-
 //동일한 이메일이 있을때 가입 X
 router.post("/register", async (req, res) => {
   const { email, pwd, phone } = req.body;
@@ -120,6 +119,7 @@ router.post("/register", async (req, res) => {
         res.status(201).json({
           status: "success",
           message: "성공되었습니다.",
+          uid: rows1.insertId,
         });
       }
     }
@@ -131,7 +131,6 @@ router.post("/register", async (req, res) => {
     });
   }
 });
-
 
 //로그인
 router.post("/login", (req, res) => {
@@ -172,7 +171,6 @@ router.post("/login", (req, res) => {
       });
     });
 });
-
 
 // 비밀번호 변경하기.
 // 1. 에러가 발생 할 때
@@ -229,7 +227,6 @@ router.put("/changePwd", (req, res) => {
     });
 });
 
-
 //프로필 이미지 받기
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
@@ -238,7 +235,9 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     const { userId } = req.body;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
-    const sql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(userId)}`;
+    const sql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(
+      userId
+    )}`;
     const result = await asyncSQL(sql);
 
     if (result && result.affectedRows === 0) {
@@ -273,7 +272,9 @@ router.put(
       await deleteProfileImage(user);
 
       // 새로운 프로필 이미지 업데이트
-      const updateSql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(userId)}`;
+      const updateSql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(
+        userId
+      )}`;
       const result = await asyncSQL(updateSql);
 
       if (result.affectedRows === 0) {
@@ -294,7 +295,9 @@ router.delete("/profile-image/:userId", async (req, res) => {
     const { userId } = req.params;
 
     // 사용자 정보를 가져오는 SQL 쿼리
-    const selectUserSql = `SELECT u_img FROM User WHERE u_id = ${parseInt(userId)}`;
+    const selectUserSql = `SELECT u_img FROM User WHERE u_id = ${parseInt(
+      userId
+    )}`;
     const rows = await asyncSQL(selectUserSql);
 
     if (!rows || rows.length === 0) {
@@ -307,7 +310,9 @@ router.delete("/profile-image/:userId", async (req, res) => {
     await deleteProfileImage(user);
 
     // u_img를 null로 업데이트하는 SQL 쿼리
-    const updateSql = `UPDATE User SET u_img = null WHERE u_id = ${parseInt(userId)}`;
+    const updateSql = `UPDATE User SET u_img = null WHERE u_id = ${parseInt(
+      userId
+    )}`;
     await asyncSQL(updateSql);
 
     res.status(200).json({ message: "프로필 이미지 삭제 성공" });
@@ -316,6 +321,5 @@ router.delete("/profile-image/:userId", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
-
 
 module.exports = router;

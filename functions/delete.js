@@ -12,9 +12,7 @@ const s3Client = new S3Client({
 async function deleteBoardImages(board) {
   const params = {
     Bucket: process.env.BUCKET_NAME,
-    Delete: {
-      Objects: [{ Key: board.b_img }, { Key: board.b_timg }],
-    },
+    Key: board.b_img,
   };
   await s3Client.send(new DeleteObjectCommand(params));
 }

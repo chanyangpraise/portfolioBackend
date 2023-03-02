@@ -75,7 +75,7 @@ router.put("/update/:bid", async (req, res) => {
 //게시글 삭제
 router.delete("/delete/:bid", async (req, res) => {
   const bid = req.params.bid;
-  const uid = req.body.uid;
+  const uid = req.query.uid;
   await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`)
     .then(async (rows) => {
       if (rows.length < 1) {
@@ -283,7 +283,6 @@ router.get("/get/count/:uid", (req, res) => {
     });
 });
 
-
 //좋아요 추가
 router.post("/like", (req, res) => {
   const { uid, bid } = req.body;
@@ -333,7 +332,6 @@ router.post("/like", (req, res) => {
       });
     });
 });
-
 
 //좋아요 취소
 router.delete("/like/:bid/:uid", async (req, res) => {
