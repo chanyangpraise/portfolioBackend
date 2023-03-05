@@ -1,58 +1,36 @@
-//multer test
-const { S3Client } = require("@aws-sdk/client-s3");
-const multer = require("multer");
-const MulterS3 = require("multer-s3");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
+//게시글 삭제
+router.delete("/delete/:bid", async (req, res) => {
+  const bid = req.params.bid;
+  const uid = req.query.uid;
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
+  try {
+    const rows = await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`);
+    if (rows.length < 1) {
+      return res.status(404).json({
+        status: "fail",
+        message: "해당 게시글을 찾을 수 없습니다.",
+      });
+    }
+    
+    await asyncSQL(`DELETE FROM b_Like WHERE bl_bid=${bid}`);
+    await asyncSQL(`DELETE FROM Comment WHERE c_bid=${bid}`);
+
+    const board = { b_img: rows[0].b_img.split("/").pop() };
+    await Promise.all([
+      deleteBoardImages(board),
+      asyncSQL(`DELETE FROM Board WHERE b_id=${bid} AND b_uid=${uid}`),
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      message: "게시글이 삭제되었습니다.",
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      status: "fail",
+      message: "서버에서 에러가 발생 했습니다.",
+    });
+  }
 });
-
-const storage = MulterS3({
-  s3,
-  bucket: process.env.BUCKET_NAME,
-  shouldTransform: function (req, file, cb) {
-    cb(null, /^image/i.test(file.mimetype));
-  },
-  transforms: [
-    {
-      id: "b_img",
-      key: function (req, file, cb) {
-        cb(null, `${uuidv4()}-${file.originalname}`);
-      },
-      transform: function (req, file, cb) {
-        cb(null, sharp().jpeg());
-      },
-    },
-    {
-      id: "b_timg",
-      key: function (req, file, cb) {
-        cb(null, Date.now().toString() + "-thumbnail-" + file.originalname);
-      },
-      transform: function (req, file, cb) {
-        cb(null, sharp().resize(200, 200).jpeg());
-      },
-    },
-    {
-      id: "u_img",
-      key: function (req, file, cb) {
-        const uid = req.body.userId;
-        cb(null, `profile-${uid}-${uuidv4()}-${file.originalname}`);
-      },
-      transform: function (req, file, cb) {
-        cb(null, sharp().jpeg());
-      },
-    },
-  ],
-});
-
-const upload = multer({ storage });
-
-module.exports = upload;
-
-

@@ -193,7 +193,7 @@ router.get("/get/count/:bid", async (req, res) => {
     return;
   }
   try {
-    const rows = await asyncQuery(
+    const rows = await asyncSQL(
       `SELECT COUNT(c_id) as count FROM Comment WHERE c_bid = ${bid};`
     );
     res.status(200).json({
