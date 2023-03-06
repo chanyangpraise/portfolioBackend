@@ -139,8 +139,7 @@ router.get("/get/main", async (req, res) => {
   ORDER BY b_date DESC
   LIMIT ${page * count}, ${count}
 `)
-    .then((rows, err) => {
-      console.log(err);
+    .then((rows) => {
       return res.status(200).json({
         status: "success",
         content: rows,
