@@ -229,8 +229,11 @@ router.put("/changePwd", (req, res) => {
 //프로필 이미지 받기
 router.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    const { location } = req.file;
     const { userId } = req.body;
+    if (!userId || !req.file) {
+      return res.status(400).end();
+    }
+    const { location } = req.file;
 
     // u_img 칼럼을 업데이트하는 SQL 쿼리
     const sql = `UPDATE User SET u_img = '${location}' WHERE u_id = ${parseInt(

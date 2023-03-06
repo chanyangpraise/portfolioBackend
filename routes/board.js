@@ -78,14 +78,16 @@ router.delete("/delete/:bid", async (req, res) => {
   const uid = req.query.uid;
 
   try {
-    const rows = await asyncSQL(`SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`);
+    const rows = await asyncSQL(
+      `SELECT * FROM Board WHERE b_id=${bid} AND b_uid=${uid}`
+    );
     if (rows.length < 1) {
       return res.status(404).json({
         status: "fail",
         message: "해당 게시글을 찾을 수 없습니다.",
       });
     }
-    
+
     await asyncSQL(`DELETE FROM b_Like WHERE bl_bid=${bid}`);
     await asyncSQL(`DELETE FROM Comment WHERE c_bid=${bid}`);
 
@@ -99,7 +101,6 @@ router.delete("/delete/:bid", async (req, res) => {
       status: "success",
       message: "게시글이 삭제되었습니다.",
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -109,49 +110,49 @@ router.delete("/delete/:bid", async (req, res) => {
   }
 });
 
+//메인 피드 최신순 게시글 6개
+router.get("/get/main", async (req, res) => {
+  let { page, count } = req.query;
+  if (!count) {
+    count = 6;
+  }
+  if (!page || page < 1) {
+    page = 0;
+  }
 
-  //메인 피드 최신순 게시글 6개
-  router.get("/get/main", async (req, res) => {
-    let { page, count } = req.query;
-    if (!count) {
-      count = 6;
-    }
-    if (!page || page < 1) {
-      page = 0;
-    }
-  
-    await asyncSQL(
-      `SELECT 
+  await asyncSQL(
+    `SELECT 
           b.b_id as bid,
           b.b_comment as content,
           b.b_img as bimg,
           b.b_date as date,
           a.u_id as uid,
-          a.u_img as uimg
+          a.u_img as uimg,
+          a.u_email as email
         FROM Board b JOIN User a
         ON b.b_uid = a.u_id
         ORDER BY b_date DESC
         LIMIT ${page * count}, ${count}`
-    )
-      .then((rows) => {
-        res.status(200).json({
-          status: "success",
-          content: rows,
-          nextPage: Number(page) + 1, // 다음 페이지 번호
-          nextCount: Number(count), // 다음 페이지에 보여줄 개수
-        });
-      })
-      .catch((err) => {
-        res.status(500).json({
-          status: "fail",
-          message: "서버에서 에러가 발생 하였습니다.",
-        });
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
+  )
+    .then((rows) => {
+      res.status(200).json({
+        status: "success",
+        content: rows,
+        nextPage: Number(page) + 1, // 다음 페이지 번호
+        nextCount: Number(count), // 다음 페이지에 보여줄 개수
       });
-  });
-  
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: "fail",
+        message: "서버에서 에러가 발생 하였습니다.",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+    });
+});
+
 // 특정 사용자의 글 조회
 // select 사용자 닉네임 + 게시판 글 + 생성일자
 // http://localhost:3000/boadrd/get?id=1
@@ -205,7 +206,6 @@ router.get("/get/user/:uid", (req, res) => {
       }
     });
 });
-
 
 // 게시글 하나만 조회(댓글 보기에 사용)
 router.get("/get/board/:bid", (req, res) => {
