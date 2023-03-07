@@ -17,7 +17,6 @@ console.log(process.env.BUCKET_NAME);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname + "/../Frontend/build")));
 // json 형식의 요청 body를 파싱
 app.use(bodyParser.json({ limit: "100mb" }));
 // urlencoded 형식의 요청 body를 파싱
@@ -28,10 +27,6 @@ app.use("/users", usersRouter);
 app.use("/board", boardRouter);
 app.use("/comment", commentRouter);
 app.use("/profile", profileRouter);
-
-app.get("/", (req, res) => {
-  res.sendFile("index.html");
-});
 
 app.listen(3000, "0.0.0.0", () => {
   console.log("Server is running : port 3000");
