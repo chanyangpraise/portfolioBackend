@@ -31,6 +31,7 @@ router.post("/write", upload.single("image"), async (req, res) => {
           status: "success",
           message: "성공되었습니다.",
           bid: `${rows.insertId}`,
+          bimg: location,
         });
       }
     })
@@ -129,8 +130,8 @@ router.get("/get/main", async (req, res) => {
     a.u_id as uid,
     a.u_img as uimg,
     a.u_email as email,
-    (SELECT COUNT(*) FROM Follow WHERE f_follower = '${parseInt(userId)}' 
-    AND f_following = a.u_id) AS following,
+    (SELECT COUNT(*) FROM Follow WHERE f_following = '${parseInt(userId)}' 
+    AND f_follower = a.u_id) AS following,
     (SELECT COUNT(*) as count FROM \`b_Like\` WHERE bl_bid = bid AND bl_uid = '${parseInt(
       userId
     )}') AS lk

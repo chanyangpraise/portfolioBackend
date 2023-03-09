@@ -98,6 +98,10 @@ router.post("/register", async (req, res) => {
   const encryptPwd = encrypt(pwd);
 
   try {
+    console.log(pwd);
+    console.log(typeof pwd);
+    console.log(encryptPwd);
+    console.log(typeof encryptPwd);
     const rows = await asyncSQL(
       `SELECT u_email FROM User WHERE u_email = "${email}"`
     );
@@ -141,6 +145,11 @@ router.post("/login", (req, res) => {
     `SELECT u_id, u_password, u_img FROM User WHERE u_email = "${email}";`
   )
     .then((rows) => {
+      console.log(rows[0].u_password);
+      console.log(typeof rows[0].u_password);
+      console.log(encryptPwd);
+      console.log(typeof encryptPwd);
+      console.log(rows[0].u_password === encryptPwd);
       if (rows.length > 0) {
         if (rows[0].u_password === encryptPwd) {
           res.status(200).json({
@@ -245,7 +254,10 @@ router.post("/upload", upload.single("image"), async (req, res) => {
       return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
     }
 
-    res.status(200).json({ message: "프로필 이미지 업로드 성공" });
+    return res.status(200).json({
+      message: "프로필 이미지 업로드 성공",
+      uImg: location || null,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "서버 오류" });
@@ -282,7 +294,9 @@ router.put(
         return res.status(404).json({ message: "사용자가 존재하지 않습니다" });
       }
 
-      res.status(200).json({ message: "프로필 이미지 수정 성공" });
+      return res
+        .status(200)
+        .json({ message: "프로필 이미지 수정 성공", uImg: location || null });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "서버 오류" });
@@ -316,7 +330,7 @@ router.delete("/profile-image/:userId", async (req, res) => {
     )}`;
     await asyncSQL(updateSql);
 
-    res.status(200).json({ message: "프로필 이미지 삭제 성공" });
+    return res.status(200).json({ message: "프로필 이미지 삭제 성공" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "서버 오류" });
