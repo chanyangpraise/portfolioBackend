@@ -29,10 +29,11 @@ router.get("/get/:bid", (req, res) => {
       c.c_date as date
     FROM Comment c JOIN User u
     ON c.c_uid = u.u_id
-    WHERE c_bid = "${bid}"
+    WHERE c_bid = ?
     ORDER BY c.c_date DESC
-    LIMIT ${page * count}, ${count}
-  `
+    LIMIT ?, ?
+  `,
+    [bid, page * count, count]
   )
     .then((rows) => {
       res.status(200).json({
@@ -58,9 +59,10 @@ router.post("/write", (req, res) => {
     res.status(400).end();
   }
 
-  asyncSQL(`
-    INSERT INTO Comment (c_comment, c_uid, c_bid) VALUES ("${content}", "${userId}", "${bid}")
-  `)
+  asyncSQL(
+    `INSERT INTO Comment (c_comment, c_uid, c_bid) VALUES (?, ?, ?)`,
+    [content, userId, bid]
+  )
     .then((result) => {
       if (result.affectedRows < 1) {
         res.status(500).json({
@@ -99,17 +101,15 @@ router.put("/fix/:cid", (req, res) => {
     `SELECT
       c_uid
     FROM Comment
-    WHERE c_id = ${cid}
-  `
+    WHERE c_id = ?`,
+    [cid]
   )
     .then((rows) => {
       if (rows.length > 0) {
         if (rows[0].c_uid === Number(userId)) {
           asyncSQL(
-            `
-            UPDATE Comment SET c_comment = "${content}"
-            WHERE c_id = "${cid}"
-          `
+            `UPDATE Comment SET c_comment = ? WHERE c_id = ?`,
+            [content, cid]
           )
             .then(() => {
               res.status(200).json({
@@ -142,7 +142,6 @@ router.put("/fix/:cid", (req, res) => {
         console.error(err);
       }
     });
-  // 댓글 수정
 });
 
 // 댓글 삭제
@@ -158,12 +157,12 @@ router.delete("/delete/:cid", async (req, res) => {
   }
 
   try {
-    const rows = await asyncSQL(
-      `SELECT c_uid FROM Comment WHERE c_id = ${cid}; `
-    );
+    const rows = await asyncSQL(`SELECT c_uid FROM Comment WHERE c_id = ?;`, [
+      cid,
+    ]);
     if (rows.length > 0) {
       if (rows[0].c_uid === Number(uid)) {
-        await asyncSQL(`DELETE FROM Comment WHERE c_id = "${cid}"; `);
+        await asyncSQL(`DELETE FROM Comment WHERE c_id = ?;`, [cid]);
         res.status(200).json({
           status: "success",
           message: "성공적으로 바뀌었습니다.",
@@ -194,7 +193,8 @@ router.get("/get/count/:bid", async (req, res) => {
   }
   try {
     const rows = await asyncSQL(
-      `SELECT COUNT(c_id) as count FROM Comment WHERE c_bid = ${bid};`
+      `SELECT COUNT(c_id) as count FROM Comment WHERE c_bid = ?;`,
+      [bid]
     );
     res.status(200).json({
       status: "success",
