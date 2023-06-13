@@ -29,10 +29,11 @@ router.get("/get/:cid", (req, res) => {
       r.re_date as date
     FROM Re_comment r JOIN user u
     ON r.re_uid = u.u_id
-    WHERE r.re_cid = "${cid}"
+    WHERE r.re_cid = ?
     ORDER BY r.re_date DESC
-    LIMIT ${page * count}, ${count}
-  `
+    LIMIT ?, ?
+  `,
+    [cid, page * count, count]
   )
     .then((rows) => {
       res.status(200).json({
@@ -60,7 +61,7 @@ router.post("/write", async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      `INSERT INTO Re_comment (re_comment, re_uid, re_bid, re_cid) VALUES ("${content}", "${userId}", "${bid}", "${cid}")`,
+      `INSERT INTO Re_comment (re_comment, re_uid, re_bid, re_cid) VALUES (?, ?, ?, ?)`,
       [content, userId, bid, cid]
     );
     if (rows.affectedRows < 1) {
@@ -99,8 +100,9 @@ router.put("/fix/:re_cid", (req, res) => {
     `SELECT
       re_uid
     FROM Re_comment
-    WHERE re_cid = ${re_cid}
-  `
+    WHERE re_cid = ?
+  `,
+    [re_cid]
   )
     .then((rows) => {
       if (rows.length > 0) {
@@ -156,8 +158,7 @@ router.delete("/delete/:re_cid", async (req, res) => {
   }
 
   try {
-    const rows = await asyncSQL(`SELECT re_uid FROM Re_comment WHERE re_id = ?`, 
-    [re_cid]);
+    const rows = await asyncSQL(`SELECT re_uid FROM Re_comment WHERE re_id = ?`, [re_cid]);
     if (rows && rows.length > 0) {
       if (rows[0].re_uid === Number(uid)) {
         await asyncSQL(`DELETE FROM Re_comment WHERE re_id = ?`, [re_cid]);
@@ -183,4 +184,3 @@ router.delete("/delete/:re_cid", async (req, res) => {
 });
 
 module.exports = router;
-
