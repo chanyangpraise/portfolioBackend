@@ -1,4 +1,6 @@
 # portfolioBackend
-김민홍 DB /
-김정겸 Backend /
-스키마 = Plan.mwb
+김민홍 DB <br/>
+김정겸 Backend <br/>
+스키마 = Plan.mwb <br/>
+
+
